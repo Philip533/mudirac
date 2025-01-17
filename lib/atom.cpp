@@ -154,14 +154,14 @@ Atom::Atom(int Z, double m, int A, NuclearRadiusModel radius_model, double fc,
  * @param  thickness:  The new thickness to set up
  * @retval None
  */
-void Atom::setFermi2(double thickness) {
+void Atom::setFermi2(double thickness, double fermi_c) {
   if (rmodel != FERMI2) {
     LOG(WARNING) << "Trying to set up nuclear skin thickness for an atom"
                  << " not using a Fermi 2-term model\n";
     return;
   }
 
-  V_coulomb = new CoulombFermi2Potential(Z, R, A, thickness);
+  V_coulomb = new CoulombFermi2Potential(Z, R, A, thickness, fermi_c);
   reset();
 }
 

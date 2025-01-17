@@ -42,6 +42,8 @@ MuDiracInputFile::MuDiracInputFile() : InputFile() {
   this->defineDoubleNode("spec_step", InputNode<double>(1e2));            // Simulated spectrum: energy step (eV)
   this->defineDoubleNode("spec_linewidth", InputNode<double>(1e3));       // Simulated spectrum: width of Gaussian-broadened lines (eV)
   this->defineDoubleNode("spec_expdec", InputNode<double>(-1.0));         // Simulated spectrum: exponential decay factor (reproduces instrumental sensitivity)
+  this->defineDoubleNode("fermi_t", InputNode<double>(-1.0));             // Fermi 2-parameter thickness term delta_F, (t in nuclear literature)
+  this->defineDoubleNode("fermi_c", InputNode<double>(-1.0));             // Fermi 2-parameter radius term R_F, (c in nuclear literature)
 
   // Integer keywords
   this->defineIntNode("isotope", InputNode<int>(-1));            // Isotope to use for element
@@ -53,6 +55,7 @@ MuDiracInputFile::MuDiracInputFile() : InputFile() {
   this->defineIntNode("state_print_precision", InputNode<int>(-1)); // Number of digits to print out in values in Dirac state output .{state_name}.out files
   this->defineIntNode("verbosity", InputNode<int>(1));           // Verbosity level (1 to 3)
   this->defineIntNode("output", InputNode<int>(1));              // Output level (1 to 3)
+
   // Vector string keywords
   this->defineStringNode("xr_lines", InputNode<string>(vector<string> {"K1-L2"}, false)); // List of spectral lines to compute
 
@@ -106,7 +109,13 @@ DiracAtom MuDiracInputFile::makeAtom() {
   da.maxit_E = this->getIntValue("max_E_iter");
   da.maxit_nodes = this->getIntValue("max_nodes_iter");
   da.maxit_state = this->getIntValue("max_state_iter");
+  da.fermi_c = this->getDoubleValue("fermi_c");
+  da.fermi_t = this->getDoubleValue("fermi_t");
+  
+  // Manually set the fermi-2 term parameters
+  da.setFermi2(da.fermi_t*Physical::fm, da.fermi_c*Physical::fm);
 
+  std::cout << da.fermi_t << "\n";
   if (this->getBoolValue("uehling_correction")) {
     da.setUehling(true, this->getIntValue("uehling_steps"),
                   this->getDoubleValue("uehling_lowcut"),

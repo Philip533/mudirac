@@ -82,6 +82,8 @@ class Atom {
   int maxit_nodes = 100;
   int maxit_state = 100;
 
+  double fermi_c;
+  double fermi_t;
   bool write_debug =
     false; // If true, files will be printed to store details of the process
 
@@ -161,7 +163,7 @@ class Atom {
   void setgrid(double rc, double dx);
 
   // Additional potential terms get/setters
-  void setFermi2(double thickness = Physical::fermi2_T);
+  void setFermi2(double thickness, double fermi_c);
   bool getUehling() {
     return use_uehling;
   };

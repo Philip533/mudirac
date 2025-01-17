@@ -56,11 +56,12 @@ double CoulombSpherePotential::V(double r) {
  * @retval
  */
 CoulombFermi2Potential::CoulombFermi2Potential(double Z, double R, double A,
-    double thickness, int csteps): CoulombSpherePotential(Z, R) {
+    double thickness, double fermi_c, int csteps): CoulombSpherePotential(Z, R) {
 
   vector<double> rho;
 
   T = thickness;
+  c = fermi_c;
 
   if (R < 0) {
     // Skip any initialisation, but the potential won't work properly
@@ -68,14 +69,14 @@ CoulombFermi2Potential::CoulombFermi2Potential(double Z, double R, double A,
   }
 
   // First, define C for this radius
-  if (A >= 5.0) {
-    c = sqrt(R * R -
-             7.0 / 3.0 * pow(M_PI * T / (4 * log(3.0)), 2));
-  } else {
-    c = 2.2291e-5 * pow(A, 1.0 / 3.0) - 0.90676e-5;
-  }
+  // if (A >= 5.0) {
+  //   c = sqrt(R * R -
+  //            7.0 / 3.0 * pow(M_PI * T / (4 * log(3.0)), 2));
+  // } else {
+  //   c = 2.2291e-5 * pow(A, 1.0 / 3.0) - 0.90676e-5;
+  // }
 
-  LOG(INFO) << "Initialising Coulomb Fermi-2 potential, c = " << c << "\n";
+  LOG(INFO) << "Initialising Coulomb Fermi-2 potential, c = " << c << " and t = " << T << "\n";
 
   // Then find the grid
   grid = logGrid(1e-8, 1e-2, csteps);
