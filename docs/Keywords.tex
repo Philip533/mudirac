@@ -73,6 +73,8 @@ These keywords accept a non-integer number. It can be written normally (e.g. 105
 	\item \texttt{spec\_step}: energy step for the simulated spectrum, in eV. Only has effect if \texttt{write\_spec = TRUE}. Default is 1E2 eV.
 	\item \texttt{spec\_linewidth}: Gaussian broadening width for the simulated spectrum, in eV. Only has effect if \texttt{write\_spec = TRUE}. Default is 1E3 eV.
 	\item \texttt{spec\_expdec}: exponential decay parameter $E_{dec}$ for a sensitivity function for the simulated spectrum, in eV. Multiplies the entire spectrum by a function $\exp(-E/E_{dec})$. Only has effect if \texttt{write\_spec = TRUE}. Default is -1 (no decay).
+        \item fermi\_c : Fermi 2 term distribution radius parameter. 
+        \item fermi\_t : Fermi 2 term distribution thickness parameter. 
 \end{itemize}
 
 \subsection{Integer keywords}
