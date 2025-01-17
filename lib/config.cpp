@@ -115,7 +115,6 @@ DiracAtom MuDiracInputFile::makeAtom() {
   // Manually set the fermi-2 term parameters
   da.setFermi2(da.fermi_t*Physical::fm, da.fermi_c*Physical::fm);
 
-  std::cout << da.fermi_t << "\n";
   if (this->getBoolValue("uehling_correction")) {
     da.setUehling(true, this->getIntValue("uehling_steps"),
                   this->getDoubleValue("uehling_lowcut"),
