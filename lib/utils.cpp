@@ -327,6 +327,45 @@ double cgCoeff(int k, double m, bool s) {
 }
 
 /**
+  * @brief Calculate a general CG coefficient
+  * @note I'm sure this is very inefficient but wanted a quick solution
+ */
+double generalCgCoeff(double j1, double j2, double J, double m1, double m2, double M){
+
+  int lower_sum_limit, upper_sum_limit;
+  double max1, min1;
+
+  double first_term, second_term,third_term;
+  double numerator, denominator;
+
+  // Limits of the summation in the equation
+  max1 = std::max(j2 - J - m1, j1 - J + m2);
+  lower_sum_limit = std::max(0.0,max1);
+  min1 = std::min(j1 - m1, j2 + m2);
+  upper_sum_limit = std::min(j1 + j2 - J, min1);
+
+  // Selection rule broken so CG coeff goes to zero
+  if (m1 + m2 != M){
+    return 0.0;
+  }
+    
+
+  numerator = (2*J+1)*factorial(j1 + j2 - J)*factorial(j1 - j2 + J)*factorial(-j1 + j2 + J);
+  denominator = factorial(j1 + j2 + J + 1);
+
+  first_term = std::sqrt(numerator/denominator);
+  second_term = std::sqrt(factorial(j1-m1)*factorial(j1+m1)*factorial(j2-m2)*factorial(j2+m2)*factorial(J-M)*factorial(J+M));
+
+  third_term = 0.0;
+  for(int i = lower_sum_limit; i <= upper_sum_limit; i++){
+    third_term += pow(-1,i)/(factorial(i)*factorial(j1+j2-J-i)*factorial(j1-m2-i)*factorial(j2+m2-i)*factorial(J-j2+m1+i)*factorial(J-j1-m2+i));
+  }
+
+  return first_term * second_term * third_term;
+
+}
+
+/**
   * @brief  Parse an atomic state's quantum numbers from IUPAC notation
   * @note   Parse an atomic state's quantum numbers from IUPAC X-ray notation.
   *

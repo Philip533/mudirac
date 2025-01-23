@@ -50,6 +50,7 @@ void qnumNodes2Principal(int nodes, int l, int &n);
 void qnumPrincipal2Nodes(int n, int l, int &nodes);
 
 double cgCoeff(int k, double m, bool s);
+double generalCgCoeff(double j1, double j2, double J, double m1, double m2, double M);
 
 void parseIupacState(string istate, int &n, int &l, bool &s);
 string printIupacState(int n, int l, bool s);
