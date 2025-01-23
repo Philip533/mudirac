@@ -215,6 +215,7 @@ class DiracAtom : public Atom {
   DiracState getState(int n, int l, bool s);
   TransitionMatrix getTransitionProbabilities(int n1, int l1, bool s1, int n2,
       int l2, bool s2, bool approx_j0 = false);
+  TransitionMatrix getDipoleTransitions(DiracState psi1, DiracState psi2, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
 };
 
 // A class used mainly for debugging purposes, works as DiracAtom but uses only

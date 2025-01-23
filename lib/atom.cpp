@@ -935,26 +935,58 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
     int n2, int l2, bool s2, bool approx_j0) {
   int k1, k2;
 
+  // Convert l and s to k
   qnumSchro2Dirac(l1, s1, k1);
   qnumSchro2Dirac(l2, s2, k2);
 
+  // Define our transition matrix
   TransitionMatrix tmat(k1, k2);
 
   // Get the relevant states
   DiracState psi1 = getState(n1, l1, s1);
   DiracState psi2 = getState(n2, l2, s2);
 
+  // Energy difference between the two states
   float DE = psi1.E - psi2.E;
-  float K = DE / Physical::c;
 
-  if (DE < 0 || abs(l2 - l1) != 1) {
-    // Invalid: state 2 has a higher energy, or transition forbidden
-    return tmat;
+  // What needs to happen for the dipole terms?
+  // 1. deltaL = +-1 
+  // 2. deltamu = 0, +=1
+
+  // No transitions as the energy levels are the wrong way round
+  if(DE < 0){
+    return tmat; 
   }
+
+  // This is the orbital angular momentum selection rule for an electric dipole
+  // or electric quadrupole transition
+  if (abs(l2 - l1) == 1) {
+
+    // Make a transition matrix that contains only the dipole contributions
+    TransitionMatrix dipole_tmat;
+    dipole_tmat = getDipoleTransitions(psi1, psi2, approx_j0, k1, k2,tmat, DE);
+  
+    return dipole_tmat;
+  }
+
+  return tmat;
+
+}
+TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi2, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE){
+
+  int l1, l2;
+  bool s1, s2;
+  qnumDirac2Schro(k1, l1, s1);
+  qnumDirac2Schro(k2, l2, s2);
+
+  TransitionMatrix dipole_tmat(k1, k2);
+
+  float K = DE/Physical::c;
 
   // Now the integrals
   int i0 = max(psi1.grid_indices.first, psi2.grid_indices.first);
   int i1 = min(psi1.grid_indices.second, psi2.grid_indices.second);
+
   int delta1 = max(i0 - psi1.grid_indices.first, 0);
   int delta2 = max(i0 - psi2.grid_indices.first, 0);
 
@@ -1025,14 +1057,15 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
         LOG(TRACE) << "Matrix element = |Az|\n";
       }
 
-      tmat.T[im1][im2] = 4.0 / 3.0 * K * M2;
+      dipole_tmat.T[im1][im2] = 4.0 / 3.0 * K * M2;
 
       LOG(TRACE) << "Transition rate, W12 = " << tmat.T[im1][im2] * Physical::s
                  << " s^-1\n";
     }
   }
 
-  return tmat;
+  return dipole_tmat;
+
 }
 
 DiracIdealAtom::DiracIdealAtom(int Z, double m, int A,
