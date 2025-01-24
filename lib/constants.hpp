@@ -17,6 +17,7 @@
 namespace Physical {
 const double alpha = 7.2973525664e-3; // Fine structure constant
 const double c = 137.035999139;       // Speed of light
+const double pi = 3.14159265358; // Pi
 
 // Particle constants
 const double m_e = 1.0;                    // Electron mass

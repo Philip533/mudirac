@@ -969,18 +969,33 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
     return dipole_tmat;
   }
 
+  // This is one of the selection rules for an electric quadrupole transition
+  if (abs(l2 - l1) == 2) {
+
+    // This is where we will compute the E2 + M1 transitions
+    // getQuadrupoleTransitions()
+
+  }
+
   return tmat;
 
 }
+/* Separate routine for calculating the dipole transition matrix so it can be separated from the higher order transitions
+ *
+ */
 TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi2, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE){
 
   int l1, l2;
   bool s1, s2;
+
+  // Convert the Dirac numbers back into Schrodinger
   qnumDirac2Schro(k1, l1, s1);
   qnumDirac2Schro(k2, l2, s2);
 
+  // Make an empty transition matrix
   TransitionMatrix dipole_tmat(k1, k2);
 
+  // Convert the energy difference
   float K = DE/Physical::c;
 
   // Now the integrals
@@ -990,6 +1005,7 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
   int delta1 = max(i0 - psi1.grid_indices.first, 0);
   int delta2 = max(i0 - psi2.grid_indices.first, 0);
 
+  // Generate the grid to integrate the states on
   vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
   vector<double> kerP1Q2(intgrid.size()), kerP2Q1(intgrid.size());
 
@@ -997,15 +1013,18 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
              << ", " << i1 << "\n";
   LOG(TRACE) << "Grid deltas " << delta1 << ", " << delta2 << "\n";
 
+  // Evaluate the integrand on the grid
   for (int i = 0; i < intgrid.size(); ++i) {
     double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
     kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i];
     kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i];
   }
 
+  // Perform the relevant integrals
   double J12 = trapzInt(dx, kerP1Q2);
   double J21 = trapzInt(dx, kerP2Q1);
 
+  // Sign of the k value to be used in the CG coefficients
   int sgk1 = (k1 < 0 ? -1 : 1);
   int sgk2 = (k2 < 0 ? -1 : 1);
 
@@ -1015,9 +1034,12 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
   // Now on to the full matrix elements
   for (int im1 = 0; im1 < tmat.m1.size(); ++im1) {
     for (int im2 = 0; im2 < tmat.m2.size(); ++im2) {
+      
+      // Grab the actual magnetic numbers
       double m1 = tmat.m1[im1];
       double m2 = tmat.m2[im2];
 
+      // Dipole selection rule
       if (abs(m1 - m2) > 1) {
         // Forbidden
         continue;
@@ -1025,6 +1047,7 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
 
       LOG(TRACE) << "Transition m1 = " << m1 << " => m2 = " << m2 << "\n";
 
+      // All of the CG coefficients that we need
       double u1 = cgCoeff(k1, m1, true);
       double u2 = cgCoeff(k1, m1, false);
       double u3 = cgCoeff(-k1, m1, true);
@@ -1040,6 +1063,7 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
                  << v3 << ' ' << v4 << "]\n";
 
       double M2 = 0;
+      // These are the matrix elements according to the different Dirac velocity operators
       if (m1 == m2 + 1) {
         M2 = 2 * pow(u1 * v4 * (l1 == (l2 - sgk2)) * J12 -
                      u3 * v2 * ((l1 - sgk1) == l2) * J21,
@@ -1057,9 +1081,10 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
         LOG(TRACE) << "Matrix element = |Az|\n";
       }
 
+      // Calculate Equation 21 from Mudirac paper
       dipole_tmat.T[im1][im2] = 4.0 / 3.0 * K * M2;
 
-      LOG(TRACE) << "Transition rate, W12 = " << tmat.T[im1][im2] * Physical::s
+      LOG(TRACE) << "Dipole transition rate, W12 = " << dipole_tmat.T[im1][im2] * Physical::s
                  << " s^-1\n";
     }
   }

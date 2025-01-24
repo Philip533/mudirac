@@ -13,6 +13,7 @@
 #include <cmath>
 #include <string>
 #include <vector>
+#include <complex>
 #include <fstream>
 #include <stdexcept>
 #include <functional>
@@ -51,6 +52,9 @@ void qnumPrincipal2Nodes(int n, int l, int &nodes);
 
 double cgCoeff(int k, double m, bool s);
 double generalCgCoeff(double j1, double j2, double J, double m1, double m2, double M);
+std::complex<double> Y1mAlphaX(int k1, int k2, int mu1, int mu2, int m, double J12, double J21);
+std::complex<double> Y1mAlphaY(int k1, int k2, int mu1, int mu2, int m, double J12, double J21);
+std::complex<double> Y1mAlphaZ(int k1, int k2, int mu1, int mu2, int m, double J12, double J21);
 
 void parseIupacState(string istate, int &n, int &l, bool &s);
 string printIupacState(int n, int l, bool s);
