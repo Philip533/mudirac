@@ -47,6 +47,28 @@ TransitionMatrix::TransitionMatrix(int k1, int k2) {
 }
 
 /**
+ * Add two transition matrices together
+ */
+TransitionMatrix addTransitionMatrices(TransitionMatrix tmat1, TransitionMatrix tmat2){
+
+  if(tmat1.m1.size() != tmat2.m1.size()){
+    if(tmat1.m2.size() != tmat2.m2.size()){
+      // throw "Cannot add transition matrices of different shapes";
+    }
+  }
+
+  TransitionMatrix new_tmat(tmat1.k1, tmat1.k2);
+  // Loop over each entry and add together
+  for (int im1 = 0; im1 < tmat1.m1.size(); ++im1) {
+    for (int im2 = 0; im2 < tmat1.m2.size(); ++im2) {
+
+      new_tmat.T[im1][im2] = tmat1.T[im1][im2] + tmat2.T[im1][im2];
+
+    }
+  }
+
+}
+/**
  * @brief  Total transition rate between two shells
  * @note   Total transition rate between two shells,
  * assuming the particle is in the first one and the
@@ -948,54 +970,6 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
 
   // Energy difference between the two states
   float DE = psi1.E - psi2.E;
-
-  // What needs to happen for the dipole terms?
-  // 1. deltaL = +-1 
-  // 2. deltamu = 0, +=1
-
-  // No transitions as the energy levels are the wrong way round
-  if(DE < 0){
-    return tmat; 
-  }
-
-  // This is the orbital angular momentum selection rule for an electric dipole
-  // or electric quadrupole transition
-  if (abs(l2 - l1) == 1) {
-
-    // Make a transition matrix that contains only the dipole contributions
-    TransitionMatrix dipole_tmat;
-    dipole_tmat = getDipoleTransitions(psi1, psi2, approx_j0, k1, k2,tmat, DE);
-  
-    return dipole_tmat;
-  }
-
-  // This is one of the selection rules for an electric quadrupole transition
-  if (abs(l2 - l1) == 2) {
-
-    // This is where we will compute the E2 + M1 transitions
-    // getQuadrupoleTransitions()
-
-  }
-
-  return tmat;
-
-}
-/* Separate routine for calculating the dipole transition matrix so it can be separated from the higher order transitions
- *
- */
-TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi2, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE){
-
-  int l1, l2;
-  bool s1, s2;
-
-  // Convert the Dirac numbers back into Schrodinger
-  qnumDirac2Schro(k1, l1, s1);
-  qnumDirac2Schro(k2, l2, s2);
-
-  // Make an empty transition matrix
-  TransitionMatrix dipole_tmat(k1, k2);
-
-  // Convert the energy difference
   float K = DE/Physical::c;
 
   // Now the integrals
@@ -1023,6 +997,117 @@ TransitionMatrix DiracAtom::getDipoleTransitions(DiracState psi1, DiracState psi
   // Perform the relevant integrals
   double J12 = trapzInt(dx, kerP1Q2);
   double J21 = trapzInt(dx, kerP2Q1);
+
+  // No transitions as the energy levels are the wrong way round
+  if(DE < 0){
+    return tmat; 
+  }
+
+  TransitionMatrix dipole_tmat;
+  TransitionMatrix quad_tmat;
+  // This is the orbital angular momentum selection rule for an electric dipole
+  // transition
+  if (abs(l2 - l1) == 1) {
+
+    // Make a transition matrix that contains only the dipole contributions
+    dipole_tmat = getDipoleTransitions(J12, J21, approx_j0, k1, k2,tmat, K);
+  
+    // return dipole_tmat;
+  }
+
+  // This is one of the selection rules for an electric quadrupole transition
+  if (abs(l2 - l1) == 2) {
+
+    // This is where we will compute the E2 + M1 transitions
+    quad_tmat = getQuadrupoleTransitions(J12, J21, approx_j0, k1, k2, tmat, K);
+    // x = 1/sqrt2 *(Y_1^-1 - Y_1^1)
+    // y = i/sqrt2 *(Y_1^-1 + Y_1^1)
+    // z = Y_1^0
+
+  }
+
+  // TransitionMatrix total_tmat = addTransitionMatrices(dipole_tmat, quad_tmat);
+  return dipole_tmat;
+
+}
+
+/** This routine calculates the electric quadrupole + magnetic dipole transition matrix i.e the second
+ * term in the Taylor expansion of the exponential
+ *
+ */
+TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float K){
+
+  // We need to compute all of the spherical harmonic matrix elements first
+  //
+  TransitionMatrix quad_tmat(k1, k2);
+
+  std::complex<double> imag_unit = (0,1.0);
+  std::vector<std::vector<std::complex<double>>> spherical_matrix = {{0,0,0}, {0,0,0}, {0,0,0}};
+
+  // Loop over all of the possible states, these are magnetic values corresponding to j
+  for (int im1 = 0; im1 < tmat.m1.size(); ++im1) {
+    for (int im2 = 0; im2 < tmat.m2.size(); ++im2) {
+      
+      double m1 = tmat.m1[im1];
+      double m2 = tmat.m2[im2];
+
+      // Magnetic selection rule
+      if (abs(m1 - m2) > 2){
+        continue; 
+      }
+
+      // First we loop over the three values of m: -1,0 ,1
+      for(int i = -1; i < 2; i++){
+
+        // We compute matrix elements for each spherical harmonic
+        std::complex<double> y1mx = Y1mAlphaX(k1, k2, m1, m2, i, J12, J21);
+        spherical_matrix[0][i+1] = y1mx;
+        std::complex<double> y1my = Y1mAlphaY(k1, k2, m1, m2, i, J12, J21);
+        spherical_matrix[1][i+1] = y1my;
+        std::complex<double> y1mz = Y1mAlphaZ(k1, k2, m1, m2, i, J12, J21);
+        spherical_matrix[2][i+1] = y1mz;
+
+      }
+
+      // Now have to combine these to form <a | r \alpha | b> matrix elements
+      std::complex<double> xax = 1.0/std::sqrt(2.0) * (spherical_matrix[0][0] - spherical_matrix[0][2]);
+      std::complex<double> yax = imag_unit/std::sqrt(2.0) * (spherical_matrix[0][0] + spherical_matrix[0][2]);
+      std::complex<double> zax = spherical_matrix[0][1];
+
+      std::complex<double> xay = 1.0/std::sqrt(2.0) * (spherical_matrix[1][0] - spherical_matrix[1][2]);
+      std::complex<double> yay = imag_unit/std::sqrt(2.0) * (spherical_matrix[1][0] + spherical_matrix[1][2]);
+      std::complex<double> zay = spherical_matrix[1][1];
+
+      std::complex<double> xaz = 1.0/std::sqrt(2.0) * (spherical_matrix[2][0] - spherical_matrix[2][2]);
+      std::complex<double> yaz = imag_unit/std::sqrt(2.0) * (spherical_matrix[2][0] + spherical_matrix[2][2]);
+      std::complex<double> zaz = spherical_matrix[2][1];
+
+      std::cout << "alphax matrix elements: " << xax << " " << yax << " " << zax << std::endl;
+      std::cout << "alphay matrix elements: " << xay << " " << yay << " " << zay << std::endl;
+      std::cout << "alphaz matrix elements: " << xaz << " " << yaz << " " << zaz << std::endl;
+      // Then we combine all these along with the appropriate prefactors, and then integrate over polarisation
+      // and solid angle to obtain a single value to go into the transition matrix
+    }
+  }
+  return quad_tmat;
+
+
+}
+
+/* Separate routine for calculating the dipole transition matrix so it can be separated from the higher order transitions
+ *
+ */
+TransitionMatrix DiracAtom::getDipoleTransitions(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float K){
+
+  int l1, l2;
+  bool s1, s2;
+
+  // Convert the Dirac numbers back into Schrodinger
+  qnumDirac2Schro(k1, l1, s1);
+  qnumDirac2Schro(k2, l2, s2);
+
+  // Make an empty transition matrix
+  TransitionMatrix dipole_tmat(k1, k2);
 
   // Sign of the k value to be used in the CG coefficients
   int sgk1 = (k1 < 0 ? -1 : 1);

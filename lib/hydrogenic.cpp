@@ -54,7 +54,7 @@ double hydrogenicSchroWavefunction(double r, double Z, double mu, int n, int l) 
     throw "Invalid quantum numbers for hydrogenic wavefunction.";
   }
 
-  R = sqrt(pow(2 * arg, 3) * factorial(n - l - 1) / (2.0 * n * factorial(n + l))) * r * exp(-arg * r) * pow(2 * arg * r, l) *
+  R = sqrt(pow(2 * arg, 3) * factorial(n - l - 1, false) / (2.0 * n * factorial(n + l,false))) * r * exp(-arg * r) * pow(2 * arg * r, l) *
       genLaguerrePoly(2 * arg * r, n - l - 1, 2 * l + 1);
 
   return R;
@@ -78,7 +78,7 @@ vector<double> hydrogenicSchroWavefunction(vector<double> r, double Z, double mu
 
   vector<double> R(r.size());
   double arg = Z * mu / n;
-  double prefac = sqrt(pow(2 * arg, 3) * factorial(n - l - 1) / (2.0 * n * factorial(n + l)));
+  double prefac = sqrt(pow(2 * arg, 3) * factorial(n - l - 1,false) / (2.0 * n * factorial(n + l,false)));
 
   if (n < 1 || l < 0 || l >= n) {
     throw "Invalid quantum numbers for hydrogenic wavefunction.";
@@ -175,7 +175,7 @@ vector<double> hydrogenicDiracWavefunction(double r, double Z, double mu, int n,
     pq[1] = -A * Z * Physical::alpha * rhodep;
   } else {
     Ek = E * k / (gamma * mc2);
-    A = sqrt(C * factorial(n - abs(k) - 1) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
+    A = sqrt(C * factorial(n - abs(k) - 1,false) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
              (Ek + pow(Ek, 2)));
     lagP = rho * genLaguerrePoly(rho, n - abs(k) - 1, 2 * gamma + 1);
     lagM = (gamma * mc2 - k * E) / (Physical::c * C) * genLaguerrePoly(rho, n - abs(k), 2 * gamma - 1);
@@ -241,7 +241,7 @@ vector<vector<double>> hydrogenicDiracWavefunction(vector<double> r, double Z, d
     }
   } else {
     Ek = E * k / (gamma * mc2);
-    A = sqrt(C * factorial(n - abs(k) - 1) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
+    A = sqrt(C * factorial(n - abs(k) - 1,false) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
              (Ek + pow(Ek, 2)));
     for (int i = 0; i < r.size(); ++i) {
       rho = 2 * C * r[i];

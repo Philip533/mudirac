@@ -32,13 +32,19 @@ double effectiveMass(double m1, double m2) {
  * @brief  Factorial of n
  *
  * @param  n:   Argument
+ * @param force_zero: If n< 0, then we return zero. This is used for CG coefficients
  * @retval      n!
  */
-int factorial(int n) {
+int factorial(int n, bool force_zero) {
   int fn = 1;
 
   if (n < 0) {
-    throw "Factorial of a negative number";
+
+    if (force_zero){
+      return 0;
+    }else{
+      throw "Factorial of a negative number";
+    }
   }
 
   for (int i = 1; i <= n; ++i) {
@@ -359,16 +365,24 @@ double generalCgCoeff(double j1, double j2, double J, double m1, double m2, doub
   if(-j1 + j2 + J < 0){
     return 0.0;
   }
+
+  if(J+M < 0){
+    return 0.0;
+  }
+
   // PROBLEM HERE
-  numerator = (2*J+1)*factorial(j1 + j2 - J)*factorial(j1 - j2 + J)*factorial(-j1 + j2 + J);
-  denominator = factorial(j1 + j2 + J + 1);
+  numerator = (2*J+1)*factorial(j1 + j2 - J,true)*factorial(j1 - j2 + J,true)*factorial(-j1 + j2 + J,true);
+  denominator = factorial(j1 + j2 + J + 1,true);
 
   first_term = std::sqrt(numerator/denominator);
-  second_term = std::sqrt(factorial(j1-m1)*factorial(j1+m1)*factorial(j2-m2)*factorial(j2+m2)*factorial(J-M)*factorial(J+M));
+  second_term = std::sqrt(factorial(j1-m1,true)*factorial(j1+m1,true)*factorial(j2-m2,true)*factorial(j2+m2,true)*factorial(J-M,true)*factorial(J+M,true));
 
   third_term = 0.0;
   for(int i = lower_sum_limit; i <= upper_sum_limit; i++){
-    third_term += pow(-1,i)/(factorial(i)*factorial(j1+j2-J-i)*factorial(j1-m2-i)*factorial(j2+m2-i)*factorial(J-j2+m1+i)*factorial(J-j1-m2+i));
+    double denom = factorial(i,true)*factorial(j1+j2-J-i,true)*factorial(j1-m2-i,true)*factorial(j2+m2-i,true)*factorial(J-j2+m1+i,true)*factorial(J-j1-m2+i,true);
+    if(denom != 0.0){
+      third_term += pow(-1,i)/denom;
+    }
   }
 
   return first_term * second_term * third_term;
@@ -386,7 +400,7 @@ double generalCgCoeff(double j1, double j2, double J, double m1, double m2, doub
   * @param J12:  Radial integral \int P_b Q_a
   * @param J21:  Radial integral \int P_a Q_b
  */
-std::complex<double> Y1mAlphaX(int k1, int k2, int mu1, int mu2, int m, double J12, double J21){
+std::complex<double> Y1mAlphaX(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
 
   int l1, l2;
   bool s1, s2;
@@ -444,7 +458,7 @@ std::complex<double> Y1mAlphaX(int k1, int k2, int mu1, int mu2, int m, double J
 
 }
 
-std::complex<double> Y1mAlphaY(int k1, int k2, int mu1, int mu2, int m, double J12, double J21){
+std::complex<double> Y1mAlphaY(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
 
   int l1, l2;
   bool s1, s2;
@@ -501,7 +515,7 @@ std::complex<double> Y1mAlphaY(int k1, int k2, int mu1, int mu2, int m, double J
   return matel;
 
 }
-std::complex<double> Y1mAlphaZ(int k1, int k2, int mu1, int mu2, int m, double J12, double J21){
+std::complex<double> Y1mAlphaZ(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
 
   int l1, l2;
   bool s1, s2;

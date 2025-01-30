@@ -122,7 +122,8 @@ int main(int argc, char *argv[]) {
         tnums.s2 = s2range[k];
 
         if (tnums.n2 < tnums.n1 || abs(tnums.l2 - tnums.l1) != 1) {
-          continue;
+          // PDJ TEMPORARILY COMMENTED OUT
+          // continue;
         }
 
         transqnums.push_back(tnums);
