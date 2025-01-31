@@ -417,7 +417,7 @@ std::complex<double> Y1mAlphaX(int k1, int k2, double mu1, double mu2, int m, do
 
   double prefactor1 = std::sqrt(3.0*(2.0*l1 - 2.0*sgk1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 + 1.0)));
 
-  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
+  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
 
   double val1 = l1-sgk1;
   double val2 = l2;
@@ -439,10 +439,10 @@ std::complex<double> Y1mAlphaX(int k1, int k2, double mu1, double mu2, int m, do
   double v4 = cgCoeff(-k1,mu1,true);
 
   // Now we need the 4 magnetic CG coeffs
-  double c3 = generalCgCoeff(l1-sgk1,1,l2,mu1+0.5,m,mu2-0.5);
-  double c4 = generalCgCoeff(l1-sgk1,1,l2,mu1-0.5,m,mu2+0.5);
-  double c5 = generalCgCoeff(l1,1,l2-sgk2,mu1+0.5,m,mu2-0.5);
-  double c6 = generalCgCoeff(l1,1,l2-sgk2,mu1-0.5,m,mu2+0.5);
+  double c3 = generalCgCoeff(l1-sgk1,1.0,l2,mu1+0.5,m,mu2-0.5);
+  double c4 = generalCgCoeff(l1-sgk1,1.0,l2,mu1-0.5,m,mu2+0.5);
+  double c5 = generalCgCoeff(l1,1.0,l2-sgk2,mu1+0.5,m,mu2-0.5);
+  double c6 = generalCgCoeff(l1,1.0,l2-sgk2,mu1-0.5,m,mu2+0.5);
 
   // Multiply everything together
   double term1 = J21 * prefactor1 * c1 * (u1 * v2 * c3 + u3 * v4 * c4);
@@ -475,7 +475,7 @@ std::complex<double> Y1mAlphaY(int k1, int k2, double mu1, double mu2, int m, do
 
   double prefactor1 = std::sqrt(3.0*(2.0*l1 - 2.0*sgk1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 + 1.0)));
 
-  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
+  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
 
   double val1 = l1-sgk1;
   double val2 = l2;
@@ -497,10 +497,10 @@ std::complex<double> Y1mAlphaY(int k1, int k2, double mu1, double mu2, int m, do
   double v4 = cgCoeff(-k1,mu1,true);
 
   // Now we need the 4 magnetic CG coeffs
-  double c3 = generalCgCoeff(l1-sgk1,1,l2,mu1+0.5,m,mu2-0.5);
-  double c4 = generalCgCoeff(l1-sgk1,1,l2,mu1-0.5,m,mu2+0.5);
-  double c5 = generalCgCoeff(l1,1,l2-sgk2,mu1+0.5,m,mu2-0.5);
-  double c6 = generalCgCoeff(l1,1,l2-sgk2,mu1-0.5,m,mu2+0.5);
+  double c3 = generalCgCoeff(l1-sgk1,1.0,l2,mu1+0.5,m,mu2-0.5);
+  double c4 = generalCgCoeff(l1-sgk1,1.0,l2,mu1-0.5,m,mu2+0.5);
+  double c5 = generalCgCoeff(l1,1.0,l2-sgk2,mu1+0.5,m,mu2-0.5);
+  double c6 = generalCgCoeff(l1,1.0,l2-sgk2,mu1-0.5,m,mu2+0.5);
 
   // Multiply everything together
   double term1 = J21 * prefactor1 * c1 * (u1 * v2 * c3 - u3 * v4 * c4);
@@ -530,7 +530,7 @@ std::complex<double> Y1mAlphaZ(int k1, int k2, double mu1, double mu2, int m, do
 
   double prefactor1 = std::sqrt(3.0*(2.0*l1 - 2.0*sgk1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 + 1.0)));
 
-  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
+  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
 
   double val1 = l1-sgk1;
   double val2 = l2;
@@ -552,17 +552,15 @@ std::complex<double> Y1mAlphaZ(int k1, int k2, double mu1, double mu2, int m, do
   double v4 = cgCoeff(-k1,mu1,true);
 
   // Now we need the 4 magnetic CG coeffs
-  double c3 = generalCgCoeff(l1-sgk1,1,l2,mu1-0.5,m,mu2-0.5);
-  double c4 = generalCgCoeff(l1-sgk1,1,l2,mu1+0.5,m,mu2+0.5);
-  double c5 = generalCgCoeff(l1,1,l2-sgk2,mu1-0.5,m,mu2-0.5);
-  double c6 = generalCgCoeff(l1,1,l2-sgk2,mu1+0.5,m,mu2+0.5);
+  double c3 = generalCgCoeff(l1-sgk1,1.0,l2,mu1-0.5,m,mu2-0.5);
+  double c4 = generalCgCoeff(l1-sgk1,1.0,l2,mu1+0.5,m,mu2+0.5);
+  double c5 = generalCgCoeff(l1,1.0,l2-sgk2,mu1-0.5,m,mu2-0.5);
+  double c6 = generalCgCoeff(l1,1.0,l2-sgk2,mu1+0.5,m,mu2+0.5);
 
   // Multiply everything together
   double term1 = J21 * prefactor1 * c1 * (u1 * v4 * c3 - u3 * v2 * c4);
 
   double term2 = J12 * prefactor2 * c2 * (u4 * v1 * c5 + u2 * v3 * c6);
-
-  // std::cout << term1 << " " << term2 << std::endl;
 
   // Final complex result
   std::complex<double> matel = (0.0, term1 - term2);

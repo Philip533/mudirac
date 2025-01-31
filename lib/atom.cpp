@@ -12,6 +12,7 @@
  */
 
 #include "atom.hpp"
+#include "constants.hpp"
 
 /**
  * @brief  Initialise a TransitionMatrix class instance
@@ -46,28 +47,6 @@ TransitionMatrix::TransitionMatrix(int k1, int k2) {
   }
 }
 
-/**
- * Add two transition matrices together
- */
-TransitionMatrix addTransitionMatrices(TransitionMatrix tmat1, TransitionMatrix tmat2){
-
-  if(tmat1.m1.size() != tmat2.m1.size()){
-    if(tmat1.m2.size() != tmat2.m2.size()){
-      // throw "Cannot add transition matrices of different shapes";
-    }
-  }
-
-  TransitionMatrix new_tmat(tmat1.k1, tmat1.k2);
-  // Loop over each entry and add together
-  for (int im1 = 0; im1 < tmat1.m1.size(); ++im1) {
-    for (int im2 = 0; im2 < tmat1.m2.size(); ++im2) {
-
-      new_tmat.T[im1][im2] = tmat1.T[im1][im2] + tmat2.T[im1][im2];
-
-    }
-  }
-
-}
 /**
  * @brief  Total transition rate between two shells
  * @note   Total transition rate between two shells,
@@ -1005,6 +984,7 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
 
   TransitionMatrix dipole_tmat;
   TransitionMatrix quad_tmat;
+
   // This is the orbital angular momentum selection rule for an electric dipole
   // transition
   if (abs(l2 - l1) == 1) {
@@ -1012,23 +992,30 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
     // Make a transition matrix that contains only the dipole contributions
     dipole_tmat = getDipoleTransitions(J12, J21, approx_j0, k1, k2,tmat, K);
   
-    // return dipole_tmat;
+    return dipole_tmat;
   }
 
+  // Evaluate the integrand on the grid
+  for (int i = 0; i < intgrid.size(); ++i) {
+    double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
+    kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i]*intgrid[i];
+    kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i]*intgrid[i];
+    std::cout << "INTGRID = " << intgrid[i] << std::endl;
+  }
+
+  // Perform the relevant integrals
+  J12 = trapzInt(dx, kerP1Q2);
+  J21 = trapzInt(dx, kerP2Q1);
   // This is one of the selection rules for an electric quadrupole transition
-  if (abs(l2 - l1) == 2) {
+  if (abs(l2 - l1) == 2 || abs(l2-l1) == 0) {
 
     // This is where we will compute the E2 + M1 transitions
     quad_tmat = getQuadrupoleTransitions(J12, J21, approx_j0, k1, k2, tmat, K);
-    // x = 1/sqrt2 *(Y_1^-1 - Y_1^1)
-    // y = i/sqrt2 *(Y_1^-1 + Y_1^1)
-    // z = Y_1^0
+    return quad_tmat;
 
   }
 
-  // TransitionMatrix total_tmat = addTransitionMatrices(dipole_tmat, quad_tmat);
-  return dipole_tmat;
-
+  return tmat;
 }
 
 /** This routine calculates the electric quadrupole + magnetic dipole transition matrix i.e the second
@@ -1069,25 +1056,27 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
 
       }
 
+      std::cout << "alpha x matrix elements" << spherical_matrix[0][0] << " " << spherical_matrix[0][1] << " " << spherical_matrix[0][1]<< std::endl;
+      std::cout << "alpha y matrix elements" << spherical_matrix[1][0] << " " << spherical_matrix[1][1] << " " << spherical_matrix[1][1]<< std::endl;
+      std::cout << "alpha z matrix elements" << spherical_matrix[2][0] << " " << spherical_matrix[2][1] << " " << spherical_matrix[2][1]<< std::endl;
       // Now have to combine these to form <a | r \alpha | b> matrix elements
-      std::complex<double> xax = 1.0/std::sqrt(2.0) * (spherical_matrix[0][0] - spherical_matrix[0][2]);
-      std::complex<double> yax = imag_unit/std::sqrt(2.0) * (spherical_matrix[0][0] + spherical_matrix[0][2]);
-      std::complex<double> zax = spherical_matrix[0][1];
+      std::complex<double> xax = std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[0][0] - spherical_matrix[0][2]);
+      std::complex<double> yax = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[0][0] + spherical_matrix[0][2]);
+      std::complex<double> zax = std::sqrt(4.0*Physical::pi/3.0)*spherical_matrix[0][1];
 
-      std::complex<double> xay = 1.0/std::sqrt(2.0) * (spherical_matrix[1][0] - spherical_matrix[1][2]);
-      std::complex<double> yay = imag_unit/std::sqrt(2.0) * (spherical_matrix[1][0] + spherical_matrix[1][2]);
-      std::complex<double> zay = spherical_matrix[1][1];
+      std::complex<double> xay = std::sqrt(2.0*Physical::pi/3.0)* (spherical_matrix[1][0] - spherical_matrix[1][2]);
+      std::complex<double> yay = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[1][0] + spherical_matrix[1][2]);
+      std::complex<double> zay = std::sqrt(4.0*Physical::pi/3.0)*spherical_matrix[1][1];
 
-      std::complex<double> xaz = 1.0/std::sqrt(2.0) * (spherical_matrix[2][0] - spherical_matrix[2][2]);
-      std::complex<double> yaz = imag_unit/std::sqrt(2.0) * (spherical_matrix[2][0] + spherical_matrix[2][2]);
-      std::complex<double> zaz = spherical_matrix[2][1];
+      std::complex<double> xaz = std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[2][0] - spherical_matrix[2][2]);
+      std::complex<double> yaz = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[2][0] + spherical_matrix[2][2]);
+      std::complex<double> zaz = std::sqrt(4.0*Physical::pi/3.0)*spherical_matrix[2][1];
 
-      std::cout << "alphax matrix elements: " << xax << " " << yax << " " << zax << std::endl;
-      std::cout << "alphay matrix elements: " << xay << " " << yay << " " << zay << std::endl;
-      std::cout << "alphaz matrix elements: " << xaz << " " << yaz << " " << zaz << std::endl;
-      // Then we combine all these along with the appropriate prefactors, and then integrate over polarisation
-      // and solid angle to obtain a single value to go into the transition matrix
-    }
+      // Total expression from mathematica
+      std::complex<double> rate = 8.0*Physical::pi / 15.0 * ((xax*xax) + (2.0*xay*xay) + (2.0*xaz*xaz) - (xay*yax) + (yay*yay) + 2.0*(yax*yax + yaz*yaz + zax*zax) - yaz*zay + 2.0*zay*zay - yay*zaz + zaz*zaz - xax*(yay + zaz));
+      std::cout << "RATE HERE for values " << k1 << " " << k2 << " "<< (std::real(rate))*K*K*K*Physical::s/(2.0*Physical::pi) << std::endl;
+      quad_tmat.T[im1][im2] = (std::real(rate))*K*K*K/(2.0*Physical::pi);
+    } 
   }
   return quad_tmat;
 

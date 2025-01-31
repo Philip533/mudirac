@@ -195,6 +195,8 @@ int main(int argc, char *argv[]) {
 
     transitions.push_back(tdata);
   }
+  cout << "TRANSITIONS " << transitions[0].tmat.k1<< endl;
+  cout << "TRANSITIONS " << transitions[0].tmat.k2<< endl;
 
   // Sort transitions by energy if requested
   if (config.getBoolValue("sort_byE")) {
