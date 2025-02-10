@@ -1000,7 +1000,6 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
     double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
     kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i]*intgrid[i];
     kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i]*intgrid[i];
-    std::cout << "INTGRID = " << intgrid[i] << std::endl;
   }
 
   // Perform the relevant integrals
@@ -1056,9 +1055,7 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
 
       }
 
-      std::cout << "alpha x matrix elements" << spherical_matrix[0][0] << " " << spherical_matrix[0][1] << " " << spherical_matrix[0][1]<< std::endl;
-      std::cout << "alpha y matrix elements" << spherical_matrix[1][0] << " " << spherical_matrix[1][1] << " " << spherical_matrix[1][1]<< std::endl;
-      std::cout << "alpha z matrix elements" << spherical_matrix[2][0] << " " << spherical_matrix[2][1] << " " << spherical_matrix[2][1]<< std::endl;
+
       // Now have to combine these to form <a | r \alpha | b> matrix elements
       std::complex<double> xax = std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[0][0] - spherical_matrix[0][2]);
       std::complex<double> yax = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[0][0] + spherical_matrix[0][2]);
@@ -1074,8 +1071,10 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
 
       // Total expression from mathematica
       std::complex<double> rate = 8.0*Physical::pi / 15.0 * ((xax*xax) + (2.0*xay*xay) + (2.0*xaz*xaz) - (xay*yax) + (yay*yay) + 2.0*(yax*yax + yaz*yaz + zax*zax) - yaz*zay + 2.0*zay*zay - yay*zaz + zaz*zaz - xax*(yay + zaz));
-      std::cout << "RATE HERE for values " << k1 << " " << k2 << " "<< (std::real(rate))*K*K*K*Physical::s/(2.0*Physical::pi) << std::endl;
       quad_tmat.T[im1][im2] = (std::real(rate))*K*K*K/(2.0*Physical::pi);
+
+      LOG(TRACE) << "Quadrupole transition rate, W12 = " << quad_tmat.T[im1][im2] * Physical::s
+                 << " s^-1\n";
     } 
   }
   return quad_tmat;
