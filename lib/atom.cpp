@@ -1042,6 +1042,23 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
         continue; 
       }
 
+      // From Atomic and Laser Spectroscopy by Corney, we have that j = 1/2 to j= 1/2 transitions
+      // are forbidden
+      bool s1, s2;
+      int  l1, l2;
+
+      qnumDirac2Schro(k1, l1, s1);
+      qnumDirac2Schro(k2, l2, s2);
+
+      float spin1 = (s1 == 0  ? -0.5 : 0.5);
+      float spin2 = (s2 == 0  ? -0.5 : 0.5);
+
+      // Return empty tmat if we have the forbidden transition
+      if ((l1 + spin1 == 0.5) && (l2 + spin2 == 0.5)) {
+      
+        return quad_tmat;
+      }
+
       // First we loop over the three values of m: -1,0 ,1
       for(int i = -1; i < 2; i++){
 
