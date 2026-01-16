@@ -370,8 +370,7 @@ double generalCgCoeff(double j1, double j2, double J, double m1, double m2, doub
     return 0.0;
   }
 
-  // PROBLEM HERE
-  numerator = (2*J+1)*factorial(j1 + j2 - J,true)*factorial(j1 - j2 + J,true)*factorial(-j1 + j2 + J,true);
+  numerator = (2*J+1)*factorial(J + j1 - j2,true)*factorial(J - j1 + j2,true)*factorial(-J + j1 + j2,true);
   denominator = factorial(j1 + j2 + J + 1,true);
 
   first_term = std::sqrt(numerator/denominator);
@@ -379,7 +378,7 @@ double generalCgCoeff(double j1, double j2, double J, double m1, double m2, doub
 
   third_term = 0.0;
   for(int i = lower_sum_limit; i <= upper_sum_limit; i++){
-    double denom = factorial(i,true)*factorial(j1+j2-J-i,true)*factorial(j1-m2-i,true)*factorial(j2+m2-i,true)*factorial(J-j2+m1+i,true)*factorial(J-j1-m2+i,true);
+    double denom = factorial(i,true)*factorial(j1+j2-J-i,true)*factorial(j1-m1-i,true)*factorial(j2+m2-i,true)*factorial(J-j2+m1+i,true)*factorial(J-j1-m2+i,true);
     if(denom != 0.0){
       third_term += pow(-1,i)/denom;
     }
@@ -397,8 +396,8 @@ double generalCgCoeff(double j1, double j2, double J, double m1, double m2, doub
   * @param mu1: Initial state magnetic value
   * @param mu2: Final state magnetic value
   * @param m:    Order of the spherical harmonic
-  * @param J12:  Radial integral \int P_b Q_a
-  * @param J21:  Radial integral \int P_a Q_b
+  * @param J12:  Radial integral \int P_b Q_a r
+  * @param J21:  Radial integral \int P_a Q_b r
  */
 std::complex<double> Y1mAlphaX(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
 
@@ -449,10 +448,8 @@ std::complex<double> Y1mAlphaX(int k1, int k2, double mu1, double mu2, int m, do
 
   double term2 = J12 * prefactor2 * c2 * (u4 * v3 * c5 + u2 * v1 * c6);
 
-  // std::cout << term1 << " " << term2 << std::endl;
-
   // Final complex result
-  std::complex<double> matel = (0.0, term1 - term2);
+  std::complex<double> matel(0.0,term1-term2);
 
   return matel;
 
@@ -505,12 +502,10 @@ std::complex<double> Y1mAlphaY(int k1, int k2, double mu1, double mu2, int m, do
   // Multiply everything together
   double term1 = J21 * prefactor1 * c1 * (u1 * v2 * c3 - u3 * v4 * c4);
 
-  double term2 = J12 * prefactor2 * c2 * (u2 * v1 * c5 - u4 * v3 * c6);
-
-  // std::cout << term1 << " " << term2 << std::endl;
+  double term2 = J12 * prefactor2 * c2 * (u2 * v1 * c6 - u4 * v3 * c5);
 
   // Final complex result
-  std::complex<double> matel = (term1 + term2, 0.0);
+  std::complex<double> matel(term1+term2, 0.0);
 
   return matel;
 
@@ -560,10 +555,11 @@ std::complex<double> Y1mAlphaZ(int k1, int k2, double mu1, double mu2, int m, do
   // Multiply everything together
   double term1 = J21 * prefactor1 * c1 * (u1 * v4 * c3 - u3 * v2 * c4);
 
-  double term2 = J12 * prefactor2 * c2 * (u4 * v1 * c5 + u2 * v3 * c6);
+  double term2 = J12 * prefactor2 * c2 * (u4 * v1 * c5 - u2 * v3 * c6);
 
+  // std::cout << "Alpha Z terms " << term1 << " " << term2 << std::endl;
   // Final complex result
-  std::complex<double> matel = (0.0, term1 - term2);
+  std::complex<double> matel(0.0, term1-term2);
 
   return matel;
 

@@ -1027,7 +1027,7 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
   //
   TransitionMatrix quad_tmat(k1, k2);
 
-  std::complex<double> imag_unit = (0,1.0);
+  std::complex<double> imag_unit(0,1.0);
   std::vector<std::vector<std::complex<double>>> spherical_matrix = {{0,0,0}, {0,0,0}, {0,0,0}};
 
   // Loop over all of the possible states, these are magnetic values corresponding to j
@@ -1074,21 +1074,23 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
 
 
       // Now have to combine these to form <a | r \alpha | b> matrix elements
-      std::complex<double> xax = std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[0][0] - spherical_matrix[0][2]);
-      std::complex<double> yax = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[0][0] + spherical_matrix[0][2]);
-      std::complex<double> zax = std::sqrt(4.0*Physical::pi/3.0)*spherical_matrix[0][1];
+      std::complex<double> xax = std::sqrt(2.0*Physical::pi/3.0)             * (spherical_matrix[0][0] - spherical_matrix[0][2]);
+      std::complex<double> yax = imag_unit * std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[0][0] + spherical_matrix[0][2]);
+      std::complex<double> zax = std::sqrt(4.0*Physical::pi/3.0)             *  spherical_matrix[0][1];
 
-      std::complex<double> xay = std::sqrt(2.0*Physical::pi/3.0)* (spherical_matrix[1][0] - spherical_matrix[1][2]);
-      std::complex<double> yay = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[1][0] + spherical_matrix[1][2]);
-      std::complex<double> zay = std::sqrt(4.0*Physical::pi/3.0)*spherical_matrix[1][1];
+      std::complex<double> xay = std::sqrt(2.0*Physical::pi/3.0)             * (spherical_matrix[1][0] - spherical_matrix[1][2]);
+      std::complex<double> yay = imag_unit * std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[1][0] + spherical_matrix[1][2]);
+      std::complex<double> zay = std::sqrt(4.0*Physical::pi/3.0)             *  spherical_matrix[1][1];
 
-      std::complex<double> xaz = std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[2][0] - spherical_matrix[2][2]);
-      std::complex<double> yaz = std::sqrt(2.0*Physical::pi/3.0)*imag_unit * (spherical_matrix[2][0] + spherical_matrix[2][2]);
-      std::complex<double> zaz = std::sqrt(4.0*Physical::pi/3.0)*spherical_matrix[2][1];
+      std::complex<double> xaz = std::sqrt(2.0*Physical::pi/3.0)             * (spherical_matrix[2][0] - spherical_matrix[2][2]);
+      std::complex<double> yaz = imag_unit * std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[2][0] + spherical_matrix[2][2]);
+      std::complex<double> zaz = std::sqrt(4.0*Physical::pi/3.0)             *  spherical_matrix[2][1];
 
-      // Total expression from mathematica
-      std::complex<double> rate = 8.0*Physical::pi / 15.0 * ((xax*xax) + (2.0*xay*xay) + (2.0*xaz*xaz) - (xay*yax) + (yay*yay) + 2.0*(yax*yax + yaz*yaz + zax*zax) - yaz*zay + 2.0*zay*zay - yay*zaz + zaz*zaz - xax*(yay + zaz));
-      quad_tmat.T[im1][im2] = (std::real(rate))*K*K*K/(2.0*Physical::pi);
+
+      // Total expression from Mathematica
+      double rate = std::real(8.0*Physical::pi / 15.0 * ((std::conj(xax)*xax) + (2.0*std::conj(xay)*xay) + (2.0*std::conj(xaz)*xaz) - (xay*yax) + (std::conj(yay)*yay) -xaz*zax + 2.0*(std::conj(yax)*yax + std::conj(yaz)*yaz + std::conj(zax)*zax) - yaz*zay + 2.0*std::conj(zay)*zay - yay*zaz + std::conj(zaz)*zaz - xax*(yay + zaz)));
+
+      quad_tmat.T[im1][im2] = rate*K/(2.0*Physical::pi);
 
       LOG(TRACE) << "Quadrupole transition rate, W12 = " << quad_tmat.T[im1][im2] * Physical::s
                  << " s^-1\n";
