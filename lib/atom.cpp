@@ -1088,8 +1088,14 @@ TransitionMatrix DiracAtom::getQuadrupoleTransitions(double J12, double J21, boo
 
 
       // Total expression from Mathematica
-      double rate = std::real(8.0*Physical::pi / 15.0 * ((std::conj(xax)*xax) + (2.0*std::conj(xay)*xay) + (2.0*std::conj(xaz)*xaz) - (xay*yax) + (std::conj(yay)*yay) -xaz*zax + 2.0*(std::conj(yax)*yax + std::conj(yaz)*yaz + std::conj(zax)*zax) - yaz*zay + 2.0*std::conj(zay)*zay - yay*zaz + std::conj(zaz)*zaz - xax*(yay + zaz)));
-
+      // double rate = std::real(8.0*Physical::pi / 15.0 * ((std::conj(xax)*xax) + (2.0*std::conj(xay)*xay) + (2.0*std::conj(xaz)*xaz) - (xay*yax) + (std::conj(yay)*yay) -xaz*zax + 2.0*(std::conj(yax)*yax + std::conj(yaz)*yaz + std::conj(zax)*zax) - yaz*zay + 2.0*std::conj(zay)*zay - yay*zaz + std::conj(zaz)*zaz - xax*(yay + zaz)));
+      double rate = 4.0 * Physical::pi / 15.0 * real((4.0 * xay * conj(xay) + 4.0 * conj(xaz) * xaz - conj(xay) * yax)
+                    - xay * conj(yax) + 4.0 * yax * conj(yax) - conj(xax) * yay + 2.0 * yay * conj(yay)
+                    + 4.0 * yaz * conj(yaz) - conj(xaz) * zax - xaz * conj(zax) + 
+                    4.0 * zax * conj(zax) - conj(yaz) * zay - yaz * conj(zay) +
+                    4.0 * zay * conj(zay) - conj(xax) * zaz - conj(yay) * zaz +
+                    xax * (2.0 * conj(xax) - conj(yay) - conj(zaz)) - yay * conj(zaz) +
+                    2.0 * zaz * conj(zaz));
       quad_tmat.T[im1][im2] = rate*K/(2.0*Physical::pi);
 
       LOG(TRACE) << "Quadrupole transition rate, W12 = " << quad_tmat.T[im1][im2] * Physical::s
