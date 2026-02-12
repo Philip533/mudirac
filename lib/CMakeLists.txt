@@ -14,9 +14,11 @@ add_library(wavefunction STATIC wavefunction.cpp)
 add_library(config STATIC config.cpp)
 add_library(debugtasks STATIC debugtasks.cpp)
 
+add_link_options(-lgsl -lgslcblas -lm)
+find_package(GSL REQUIRED)
 # Define interface library
 add_library(mudiraclib INTERFACE)
 target_link_libraries(mudiraclib INTERFACE debugtasks config output
                       atom boundary state potential
                       econfigs hydrogenic transforms 
-                      wavefunction integrate elements input utils)
+                      wavefunction integrate elements input utils gsl)
