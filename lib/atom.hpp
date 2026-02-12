@@ -214,7 +214,7 @@ class DiracAtom : public Atom {
                  double &maxE);
   DiracState convergeState(int n = 1, int k = -1);
   DiracState getState(int n, int l, bool s);
-  void getTransitionProbabilities(int n1, int l1, bool s1, int n2,
+  void getTransitionRates(int n1, int l1, bool s1, int n2,
       int l2, bool s2, TransitionData &tdata, bool approx_j0 = true);
   TransitionMatrix getDipoleTransitions(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
   TransitionMatrix getQuadrupoleTransitions(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);

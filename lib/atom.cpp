@@ -932,7 +932,7 @@ DiracState DiracAtom::getState(int n, int l, bool s) {
  * @param  approx_j0: If true, approximate the Bessel function j0(K*r) as 1
  * @retval Transition matrix
  */
-void DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
+void DiracAtom::getTransitionRates(int n1, int l1, bool s1,
     int n2, int l2, bool s2, TransitionData &tdata, bool approx_j0) {
   int k1, k2;
 
@@ -966,16 +966,7 @@ void DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
              << ", " << i1 << "\n";
   LOG(TRACE) << "Grid deltas " << delta1 << ", " << delta2 << "\n";
 
-  // Evaluate the integrand on the grid
-  for (int i = 0; i < intgrid.size(); ++i) {
-    double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
-    kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i];
-    kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i];
-  }
 
-  // Perform the relevant integrals
-  double J12 = trapzInt(dx, kerP1Q2);
-  double J21 = trapzInt(dx, kerP2Q1);
 
   // No transitions as the energy levels are the wrong way round
   if(DE < 0){
@@ -990,24 +981,36 @@ void DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
   // transition
   if (abs(l2 - l1) == 1) {
 
+    // Evaluate the integrand on the grid
+    for (int i = 0; i < intgrid.size(); ++i) {
+      double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
+      kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i];
+      kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i];
+    }
+
+    // Perform the relevant integrals
+    double J12 = trapzInt(dx, kerP1Q2);
+    double J21 = trapzInt(dx, kerP2Q1);
+
     // Make a transition matrix that contains only the dipole contributions
     tdata.tmat = getDipoleTransitions(J12, J21, approx_j0, k1, k2,tmat, K);
   
     return;
   }
 
-  // Evaluate the integrand on the grid
-  for (int i = 0; i < intgrid.size(); ++i) {
-    double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
-    kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i]*intgrid[i];
-    kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i]*intgrid[i];
-  }
-
-  // Perform the relevant integrals
-  J12 = trapzInt(dx, kerP1Q2);
-  J21 = trapzInt(dx, kerP2Q1);
   // This is one of the selection rules for an electric quadrupole transition
   if (abs(l2 - l1) == 2 || abs(l2-l1) == 0) {
+
+    // Evaluate the integrand on the grid
+    for (int i = 0; i < intgrid.size(); ++i) {
+      double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
+      kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i]*intgrid[i];
+      kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i]*intgrid[i];
+    }
+
+    // Perform the relevant integrals
+    double J12 = trapzInt(dx, kerP1Q2);
+    double J21 = trapzInt(dx, kerP2Q1);
 
     // This is where we will compute the E2 + M1 transitions
     tdata.tmat = getQuadrupoleTransitions(J12, J21, approx_j0, k1, k2, tmat, K);
