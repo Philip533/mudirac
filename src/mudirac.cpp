@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Compute transition probability
-    tdata.tmat = da.getTransitionProbabilities(n2, l2, s2, n1, l1, s1);
+    da.getTransitionProbabilities(n2, l2, s2, n1, l1, s1, tdata);
 
     LOG(INFO) << "Transition energy = " << (tdata.ds2.E - tdata.ds1.E) / (Physical::eV * 1000) << " kEv\n";
 

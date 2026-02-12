@@ -104,36 +104,36 @@ TEST_CASE("Dirac Atom - energy search", "[DiracAtom]")
   ds = da.convergeState(2, -1);
   REQUIRE(ds.E == Approx(Es2));
 }
-
 TEST_CASE("Dirac Atom - transitions", "[DiracAtom]")
 {
   // Tests are carried out with an ideal hydrogen atom
   // Exact values are taken from NIST database
   DiracIdealAtom daH = DiracIdealAtom(1, 1, 1, NuclearRadiusModel::SPHERE);
+  TransitionData tdata;
   TransitionMatrix tmat(-1, -1);
 
   // 2p3/2 => 1s1/2
-  tmat = daH.getTransitionProbabilities(2, 1, true, 1, 0, true);
+  daH.getTransitionProbabilities(2, 1, true, 1, 0, true, tdata);
   REQUIRE(tmat.totalRate() * Physical::s == Approx(6.2648e+08).epsilon(1e-4));
   // 2p1/2 => 1s1/2
-  tmat = daH.getTransitionProbabilities(2, 1, false, 1, 0, true);
-  REQUIRE(tmat.totalRate() * Physical::s == Approx(6.2649e+08).epsilon(1e-4));
+  daH.getTransitionProbabilities(2, 1, false, 1, 0, true,tdata);
+  REQUIRE(tdata.tmat.totalRate() * Physical::s == Approx(6.2649e+08).epsilon(1e-4));
 
   // 3d5/2 => 2p3/2
-  tmat = daH.getTransitionProbabilities(3, 2, true, 2, 1, true);
-  REQUIRE(tmat.totalRate() * Physical::s == Approx(6.4651e+07).epsilon(1e-4));
+  daH.getTransitionProbabilities(3, 2, true, 2, 1, true, tdata);
+  REQUIRE(tdata.tmat.totalRate() * Physical::s == Approx(6.4651e+07).epsilon(1e-4));
 
   // 3d3/2 => 2p3/2
-  tmat = daH.getTransitionProbabilities(3, 2, false, 2, 1, true);
-  REQUIRE(tmat.totalRate() * Physical::s == Approx(1.0775e+07).epsilon(1e-4));
+  daH.getTransitionProbabilities(3, 2, false, 2, 1,  true, tdata);
+  REQUIRE(tdata.tmat.totalRate() * Physical::s == Approx(1.0775e+07).epsilon(1e-4));
 
   // Iron-like atom
   DiracAtom daFe = DiracAtom(26, 1, 56, NuclearRadiusModel::SPHERE);
 
   // 3d3/2 => 3p1/2
-  tmat = daFe.getTransitionProbabilities(3, 2, false, 3, 1, false);
+  daFe.getTransitionProbabilities(3, 2, false, 3, 1, true, tdata);
   REQUIRE(
-      tmat.totalRate() * Physical::s ==
+      tdata.tmat.totalRate() * Physical::s ==
       Approx(1.31e7).epsilon(
           3e-2)); // Precision is not strong here... possibly needs improvement
 }

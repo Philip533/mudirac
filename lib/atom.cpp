@@ -932,8 +932,8 @@ DiracState DiracAtom::getState(int n, int l, bool s) {
  * @param  approx_j0: If true, approximate the Bessel function j0(K*r) as 1
  * @retval Transition matrix
  */
-TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
-    int n2, int l2, bool s2, bool approx_j0) {
+void DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
+    int n2, int l2, bool s2, TransitionData &tdata, bool approx_j0) {
   int k1, k2;
 
   // Convert l and s to k
@@ -979,7 +979,8 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
 
   // No transitions as the energy levels are the wrong way round
   if(DE < 0){
-    return tmat; 
+    tdata.tmat = tmat;
+    return; 
   }
 
   TransitionMatrix dipole_tmat;
@@ -990,9 +991,9 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
   if (abs(l2 - l1) == 1) {
 
     // Make a transition matrix that contains only the dipole contributions
-    dipole_tmat = getDipoleTransitions(J12, J21, approx_j0, k1, k2,tmat, K);
+    tdata.tmat = getDipoleTransitions(J12, J21, approx_j0, k1, k2,tmat, K);
   
-    return dipole_tmat;
+    return;
   }
 
   // Evaluate the integrand on the grid
@@ -1009,12 +1010,12 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
   if (abs(l2 - l1) == 2 || abs(l2-l1) == 0) {
 
     // This is where we will compute the E2 + M1 transitions
-    quad_tmat = getQuadrupoleTransitions(J12, J21, approx_j0, k1, k2, tmat, K);
-    return quad_tmat;
+    tdata.tmat = getQuadrupoleTransitions(J12, J21, approx_j0, k1, k2, tmat, K);
+    return;
 
   }
 
-  return tmat;
+  return;
 }
 
 /** This routine calculates the electric quadrupole + magnetic dipole transition matrix i.e the second
