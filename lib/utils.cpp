@@ -335,56 +335,14 @@ double cgCoeff(int k, double m, bool s) {
 
 /**
   * @brief Calculate a general CG coefficient
-  * @note I'm sure this is very inefficient but wanted a quick solution
+  * @brief This is a wrapper around GSL's Wigner3j coefficient routine
+  * @note The arguments are multiplied by 2 as this is specified by GSL's interface
  */
 double generalCgCoeff(double j1, double j2, double J, double m1, double m2, double M){
 
-  int lower_sum_limit, upper_sum_limit;
-  double max1, min1;
-
-  double first_term, second_term,third_term;
-  double numerator, denominator;
-
-  // Limits of the summation in the equation
-  max1 = std::max(j2 - J - m1, j1 - J + m2);
-  lower_sum_limit = std::max(0.0,max1);
-  min1 = std::min(j1 - m1, j2 + m2);
-  upper_sum_limit = std::min(j1 + j2 - J, min1);
-
-  // Selection rule broken so CG coeff goes to zero
-  if (m1 + m2 != M){
-    return 0.0;
-  }
-    
-  if(j1 + j2 - J < 0){
-    return 0.0;
-  }
-  if(j1 - j2 + J < 0){
-    return 0.0;
-  }
-  if(-j1 + j2 + J < 0){
-    return 0.0;
-  }
-
-  if(J+M < 0){
-    return 0.0;
-  }
-
-  numerator = (2*J+1)*factorial(J + j1 - j2,true)*factorial(J - j1 + j2,true)*factorial(-J + j1 + j2,true);
-  denominator = factorial(j1 + j2 + J + 1,true);
-
-  first_term = std::sqrt(numerator/denominator);
-  second_term = std::sqrt(factorial(j1-m1,true)*factorial(j1+m1,true)*factorial(j2-m2,true)*factorial(j2+m2,true)*factorial(J-M,true)*factorial(J+M,true));
-
-  third_term = 0.0;
-  for(int i = lower_sum_limit; i <= upper_sum_limit; i++){
-    double denom = factorial(i,true)*factorial(j1+j2-J-i,true)*factorial(j1-m1-i,true)*factorial(j2+m2-i,true)*factorial(J-j2+m1+i,true)*factorial(J-j1-m2+i,true);
-    if(denom != 0.0){
-      third_term += pow(-1,i)/denom;
-    }
-  }
-
-  return first_term * second_term * third_term;
+  double wigner3j = gsl_sf_coupling_3j(int(2*j1), int(2*j2), int(2*J), int(2*m1), int(2*m2), -int(2*M));
+  // return first_term * second_term * third_term;
+  return std::pow(-1,j1-j2+M) * std::sqrt(2*J + 1.0) * wigner3j;
 
 }
 

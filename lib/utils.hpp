@@ -19,6 +19,8 @@
 #include <functional>
 
 #include "../vendor/aixlog/aixlog.hpp"
+#include "gsl/gsl_sf_coulomb.h"
+#include "gsl/gsl_sf_coupling.h"
 
 using namespace std;
 
