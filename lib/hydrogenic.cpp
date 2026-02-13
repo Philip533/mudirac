@@ -133,7 +133,7 @@ vector<double> hydrogenicSchroWavefunction(vector<double> r, double Z, double mu
 
   // We duplicate the code to avoid recalculating the prefactor at every point
   for (int i = 0; i < r.size(); ++i) {
-    R[i] = prefac * r[i] * exp(-arg * r[i]) * pow(2 * arg * r[i], l) *
+    R[i] = prefac * exp(-arg * r[i]) * pow(2 * arg * r[i], l) *
            genLaguerrePoly(2 * arg * r[i], n - l - 1, 2 * l + 1);
   }
 
