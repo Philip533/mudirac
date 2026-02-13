@@ -11,7 +11,54 @@
  */
 
 #include "hydrogenic.hpp"
+/**
+ * @brief  Radial eigenfunction of a given hydrogenic unbound Schroedinger state
+ * @note  Returns the unbound Coulomb wavefunction at a distance r for an electron
+ * with energy E 
+ *
+ * R_l(r) = exp(ikr) * kr * 1_F_1(l + 1-iy;2l+2; -2ikr)
+ *
+ * @param  r:   Distance at which to compute the wavefunction
+ * @param  Z:   Nuclear charge 
+ * @param  E:   Energy of the unbound electron i.e difference of muonic x-ray and binding energy
+ * @param  l:   Orbital quantum number 
+ * @retval      Radial wavefunction value
+ */
+vector<vector<double>> hydrogenicUnboundWavefunction(vector<double> r, double Z, double E) {
 
+
+  // We first need to calculate y, the dimensionless continuum parameter as defined by Akylas in his thesis
+  //
+  // y = Z * alpha /(sqrt(2E + E^2)), where E is the energy of the continuum electron
+  // i.e the closer the electron binding energy is to the muonic x-ray energy, the larger the continuum
+  // parameter, and the larger the rate will be
+  double y = Z*Physical::alpha/(sqrt(2.0 * E + pow(E,2)));
+
+  double *fc_array = (double *)malloc(32);
+  double exponent;
+  double *norm_array = (double *)malloc(32);
+  vector<vector<double>> output(r.size(), vector<double>(4,0.0));
+
+
+  for (int i = 0; i < r.size(); i++){
+
+    *fc_array = 0.0;
+    // Library routine which calculates the Coulomb wavefunction
+    // aka the scattering state wavefunction, for given values of l
+    // where each value for a given l is stored in fc_array
+    gsl_sf_coulomb_wave_F_array(0, 3, y, r[i], fc_array, &exponent);
+    gsl_sf_coulomb_CL_array(0,3, y, norm_array);
+
+    for(int j = 0; j < 4; j++){
+      output[i][j] = fc_array[j];//*norm_array[j];
+    }
+  }
+
+  free(fc_array);
+  free(norm_array);
+
+  return output;
+}
 /**
  * @brief Energy of a given hydrogenic Schroedinger state
  * @note Returns the known eigenenergy for a hydrogenic atom computed with

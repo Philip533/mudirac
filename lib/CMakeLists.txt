@@ -1,4 +1,5 @@
 add_library(atom STATIC atom.cpp)
+add_library(auger STATIC auger.cpp)
 add_library(boundary STATIC boundary.cpp)
 add_library(state STATIC state.cpp)
 add_library(econfigs STATIC econfigs.cpp)
@@ -19,6 +20,6 @@ find_package(GSL REQUIRED)
 # Define interface library
 add_library(mudiraclib INTERFACE)
 target_link_libraries(mudiraclib INTERFACE debugtasks config output
-                      atom boundary state potential
+                      atom auger boundary state potential
                       econfigs hydrogenic transforms 
                       wavefunction integrate elements input utils gsl)

@@ -12,6 +12,7 @@
  */
 
 #include "../vendor/aixlog/aixlog.hpp"
+#include "auger.hpp"
 #include "boundary.hpp"
 #include "constants.hpp"
 #include "econfigs.hpp"
@@ -71,6 +72,7 @@ struct TransitionData {
   DiracState ds1;
   DiracState ds2;
   TransitionMatrix tmat;
+  vector<TransitionMatrix> auger_tmat;
 };
 
 class Atom {
@@ -216,8 +218,10 @@ class DiracAtom : public Atom {
   DiracState getState(int n, int l, bool s);
   void getTransitionRates(int n1, int l1, bool s1, int n2,
       int l2, bool s2, TransitionData &tdata, bool approx_j0 = true);
-  TransitionMatrix getDipoleTransitions(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
-  TransitionMatrix getQuadrupoleTransitions(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
+  TransitionMatrix getRadiativeDipoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
+  TransitionMatrix getRadiativeQuadrupoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
+  vector<TransitionMatrix> getAugerDipoleRates(int ni, int li, bool si, int nf, int lf, bool sf);
+  vector<TransitionMatrix> getAugerRates(int ni, int li, bool si, int nf, int lf, bool sf);
 };
 
 // A class used mainly for debugging purposes, works as DiracAtom but uses only

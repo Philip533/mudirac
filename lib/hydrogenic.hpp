@@ -20,6 +20,7 @@ using namespace std;
 #ifndef MUDIRAC_HYDROGENIC
 #define MUDIRAC_HYDROGENIC
 
+vector<vector<double>> hydrogenicUnboundWavefunction(vector<double> r, double Z, double E);
 double hydrogenicSchroEnergy(double Z = 1.0, double mu = 1.0, int n = 1);
 double hydrogenicSchroWavefunction(double r, double Z = 1, double mu = 1, int n = 1, int l = 0);
 vector<double> hydrogenicSchroWavefunction(vector<double> r, double Z = 1, double mu = 1, int n = 1, int l = 0);
