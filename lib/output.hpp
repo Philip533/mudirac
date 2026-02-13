@@ -25,6 +25,7 @@ using namespace std;
 
 void writeDiracState(DiracState ds, string fname, int output_precision=-1);
 void writeTransitionMatrix(TransitionMatrix tmat, string fname);
+void writeAugerTransitionMatrices(vector<TransitionMatrix> tmat, string fname);
 void writeEConfPotential(EConfPotential epot, string fname);
 void writeSimSpec(vector<TransitionData> transitions, double dE, double lw, double expd, string fname);
 

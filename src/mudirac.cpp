@@ -257,7 +257,9 @@ int main(int argc, char *argv[]) {
         saved_states.push_back(sname);
       }
       string fname = seed + "." + transitions[i].name + ".tmat.out";
+      string fname_auger = seed + "." + transitions[i].name + ".auger_tmat.out";
       writeTransitionMatrix(transitions[i].tmat, fname);
+      writeAugerTransitionMatrices(transitions[i].auger_tmat, fname_auger);
     }
   }
 
