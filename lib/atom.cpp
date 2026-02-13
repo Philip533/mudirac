@@ -1016,6 +1016,12 @@ void DiracAtom::getTransitionRates(int n1, int l1, bool s1,
     return;
 
   }
+  if (abs(l2 - l1) == 3) {
+
+
+    tdata.auger_tmat = getAugerOctupoleRates(n1, l1, s1, n2, l2, s2);
+    return;
+  }
 
   return;
 }
@@ -1113,8 +1119,6 @@ TransitionMatrix DiracAtom::getRadiativeQuadrupoleRates(double J12, double J21, 
 /* Separate routine for calculating the dipole transition matrix so it can be separated from the higher order transitions
  *
  */
-
-
 
 TransitionMatrix DiracAtom::getRadiativeDipoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float K){
 
@@ -1391,6 +1395,105 @@ vector<TransitionMatrix> DiracAtom::getAugerQuadrupoleRates(int ni, int li, bool
         // Now we can actually compute the angular integrals
         // and build our transition matrix
         double angular_ints = pow(augerAngularIntegrals(2, li, lf, 2, 0, me, 0, mi, mf, si, sf), 2);
+        tmat.T[im1][im2] = angular_ints*radial_integrals;
+      }
+    }
+
+    // Put the transition matrix into our vector
+    tmat_vector.push_back(tmat);
+  }
+
+  return tmat_vector;
+}
+vector<TransitionMatrix> DiracAtom::getAugerOctupoleRates(int ni, int li, bool si, int nf, int lf, bool sf){
+
+
+  // Get the muonic states
+  DiracState dsi = getState(ni, li, si);
+  DiracState dsf = getState(nf, lf, sf);
+
+  // Get the Dirac number for the transition matrix
+  int ki, kf;
+  qnumSchro2Dirac(li, si, ki);
+  qnumSchro2Dirac(lf, sf, kf);
+
+  // Contains the transition matrices for each value of the
+  // unbound electron's magnetic number
+  vector<TransitionMatrix> tmat_vector;
+
+  // Now we build a grid to perform the electron integral on
+  // This is currently a free parameter that needs to be investigated
+  int N = dsi.P.size();
+  int elec_N = 1000;
+
+  // We get ourselves a grid and give it some appropriate limits
+  vector<double> elec_grid = linGrid(1e-8, 10.0, elec_N);
+  
+  // Now build the 1s wavefunction on it
+  vector<double> elec_1s = hydrogenicSchroWavefunction(elec_grid, Z, 1.0, 1, 0);
+
+  // Now calculate the kinetic energy of the unbound electron. This is the muon x-ray energy
+  // minus the electron binding energy
+  double kinetic_E = (dsi.E - dsf.E + hydrogenicSchroEnergy(Z, 1.0, 1)) / Physical::eV;
+
+  // Now get the unbound wavefunctions
+  vector<vector<double>> elec_unbound_all = hydrogenicUnboundWavefunction(elec_grid, Z, kinetic_E);
+  vector<double> elec_unbound(elec_N, 0.0);
+  // CPP has bad array operations so we must manually copy the correct wavefunction element by element
+  for (int i = 0; i< elec_N; i++){
+    elec_unbound[i] = elec_unbound_all[i][3];
+  }
+
+  // Now compute the dipole integral for the electron
+  double dipole_integral = electronAugerOctupole(elec_grid, elec_1s, elec_unbound);
+  
+  // Build the muon grid
+  int i0 = max(dsi.grid_indices.first, dsf.grid_indices.first);
+  int i1 = min(dsi.grid_indices.second, dsf.grid_indices.second);
+  int delta1 = max(i0 - dsi.grid_indices.first, 0);
+  int delta2 = max(i0 - dsf.grid_indices.first, 0);
+
+  // Build a log grid and an integrand of the same size
+  vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
+  vector<double> kerP1P2(intgrid.size());
+
+  // Here we're calculating the muon radial integrands i.e P_i P_f on a log grid,
+  // so an extra r appaears
+  for (int i = 0; i < intgrid.size(); ++i) {
+    kerP1P2[i] = dsi.P[i + delta1] * dsf.P[i + delta2] * pow(intgrid[i],4);
+  }
+
+  // Perform the muonic radial integrals
+  double J12 = trapzInt(dx, kerP1P2);
+
+  // We can now compute the total radial contribution to the rate by multiplying and squaring 
+  // the muonic and electronic contributions
+  double radial_integrals = std::pow(J12 * dipole_integral, 2);
+
+  // Now we must do the angular integrals
+  // For now, we are assuming a 1s electron
+  // Since this is the dipole routine, we know that L = 1 for the unbound
+  // electron
+  // We need to loop over the magnetic numbers of every state
+
+  // Loop over the continuum electron
+  for (int me = -3; me <= 3; me++){
+  
+    // Make a transition matrix that will correspond to the current value of me 
+    TransitionMatrix tmat = TransitionMatrix(ki, kf);
+    
+    // Now loop over the muonic magnetic numbers
+    for (int im1 = 0; im1 < tmat.m1.size(); ++im1){
+    
+      for (int im2 = 0; im2 < tmat.m2.size(); ++im2){
+
+        // Get the actual magnetic numbers
+        double mi = tmat.m1[im1];
+        double mf = tmat.m2[im2];
+
+        // Now we can actually compute the angular integrals
+        // and build our transition matrix
+        double angular_ints = pow(augerAngularIntegrals(3, li, lf, 3, 0, me, 0, mi, mf, si, sf), 2);
         tmat.T[im1][im2] = angular_ints*radial_integrals;
       }
     }

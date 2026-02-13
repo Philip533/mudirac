@@ -24,5 +24,6 @@ using namespace std;
 
 double electronAugerDipole(vector<double> x_axis, vector<double> bound_elec, vector<double> unbound_elec);
 double electronAugerQuadrupole(vector<double> x_axis, vector<double> bound_elec, vector<double> unbound_elec);
+double electronAugerOctupole(vector<double> x_axis, vector<double> bound_elec, vector<double> unbound_elec);
 vector<double> productWvfn(vector<double> initial_state, vector<double> final_state);
 double augerAngularIntegrals(int L, int li, int lf, int l, int lp, int m, int mp, double mi, double mf, bool s1, bool s2);

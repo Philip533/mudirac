@@ -63,6 +63,24 @@ double electronAugerQuadrupole(vector<double> x_axis, vector<double> bound_elec,
   return quadrupole_rate;
 }
 
+double electronAugerOctupole(vector<double> x_axis, vector<double> bound_elec, vector<double> unbound_elec){
+
+  int N = x_axis.size();
+
+  vector<double> product_state = productWvfn(bound_elec, unbound_elec);
+  vector<double> integrand(N,0.0);
+
+  double quadrupole_rate;
+
+  // We need to divide by r for the quadrupole rate
+  for(int i = 0; i < N; i++){
+    integrand[i] = product_state[i] / pow(x_axis[i],2);
+  }
+
+  quadrupole_rate = trapzInt(x_axis, integrand);
+
+  return quadrupole_rate;
+}
 /**
  * Multiply any two initial and final states 
  * in the same coordinate i.e both muon or both electron
