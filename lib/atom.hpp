@@ -221,6 +221,7 @@ class DiracAtom : public Atom {
   TransitionMatrix getRadiativeDipoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
   TransitionMatrix getRadiativeQuadrupoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
   vector<TransitionMatrix> getAugerDipoleRates(int ni, int li, bool si, int nf, int lf, bool sf);
+  vector<TransitionMatrix> getAugerQuadrupoleRates(int ni, int li, bool si, int nf, int lf, bool sf);
   vector<TransitionMatrix> getAugerRates(int ni, int li, bool si, int nf, int lf, bool sf);
 };
 
