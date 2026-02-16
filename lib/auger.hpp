@@ -27,3 +27,4 @@ double electronAugerQuadrupole(vector<double> x_axis, vector<double> bound_elec,
 double electronAugerOctupole(vector<double> x_axis, vector<double> bound_elec, vector<double> unbound_elec);
 vector<double> productWvfn(vector<double> initial_state, vector<double> final_state);
 double augerAngularIntegrals(int L, int li, int lf, int l, int lp, int m, int mp, double mi, double mf, bool s1, bool s2);
+double augerRadialPenetrationCorrection(vector<double> r1_axis, vector<double> r2_axis, vector<double> mu_i, vector<double> mu_f, vector<double> e_i, vector<double> e_f, int multipolarity);

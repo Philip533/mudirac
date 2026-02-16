@@ -1119,7 +1119,6 @@ TransitionMatrix DiracAtom::getRadiativeQuadrupoleRates(double J12, double J21, 
 /* Separate routine for calculating the dipole transition matrix so it can be separated from the higher order transitions
  *
  */
-
 TransitionMatrix DiracAtom::getRadiativeDipoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float K){
 
   int l1, l2;
@@ -1228,7 +1227,7 @@ vector<TransitionMatrix> DiracAtom::getAugerDipoleRates(int ni, int li, bool si,
   int elec_N = 1000;
 
   // We get ourselves a grid and give it some appropriate limits
-  vector<double> elec_grid = linGrid(0.0, 10.0, elec_N);
+  vector<double> elec_grid = linGrid(1e-8, 10.0, elec_N);
   
   // Now build the 1s wavefunction on it
   vector<double> elec_1s = hydrogenicSchroWavefunction(elec_grid, Z, 1.0, 1, 0);
@@ -1269,7 +1268,8 @@ vector<TransitionMatrix> DiracAtom::getAugerDipoleRates(int ni, int li, bool si,
 
   // We can now compute the total radial contribution to the rate by multiplying and squaring 
   // the muonic and electronic contributions
-  double radial_integrals = std::pow(J12 * dipole_integral, 2);
+  double radial_integrals = std::pow(J12 * dipole_integral - augerRadialPenetrationCorrection(intgrid,elec_grid,dsi.P,dsf.P,elec_1s, elec_unbound,1), 2);
+  // double radial_integrals = std::pow(J12 * dipole_integral, 2);
 
   // Now we must do the angular integrals
   // For now, we are assuming a 1s electron

@@ -169,3 +169,37 @@ double augerAngularIntegrals(int L, int li, int lf, int l, int lp, int m, int mp
   return total_sum*prefactor; 
 
 }
+
+double augerRadialPenetrationCorrection(vector<double> r1_axis, vector<double> r2_axis, vector<double> mu_i, vector<double> mu_f, vector<double> e_i, vector<double> e_f, int multipolarity){
+
+  double muon_integrand;
+  double electron_integrand;
+  double total_integral = 0.0;
+
+  double dx1 = r1_axis[1] - r1_axis[0];
+  double dx2 = r2_axis[1] - r2_axis[0];
+
+  // Loop over muon coordinate
+  for (int i = 0; i < r1_axis.size(); ++i) {
+    muon_integrand = mu_f[i] * mu_i[i] * pow(r1_axis[1],2)*dx1;
+    double r1 = r1_axis[i];
+
+    // Electron coordinate
+    for (int j = 0; j < r2_axis.size(); ++j) {
+
+      double r2 = r2_axis[j];
+      if (r2 > r1){
+        break;
+      }
+
+      electron_integrand += e_f[j] * e_i[j] * pow(r2,2) * (pow(r1/r2,multipolarity)/r2 - pow(r2/r1, multipolarity)/r1)*dx2;
+    
+    }
+    total_integral += muon_integrand*electron_integrand;
+
+
+  }
+  std::cout << total_integral << std::endl;
+  return total_integral;
+}
+
