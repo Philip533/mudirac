@@ -11,6 +11,7 @@
  */
 
 #include "utils.hpp"
+#include "constants.hpp"
 
 /**
  * @brief  Compute the effective mass of a two-body system
@@ -31,13 +32,19 @@ double effectiveMass(double m1, double m2) {
  * @brief  Factorial of n
  *
  * @param  n:   Argument
+ * @param force_zero: If n< 0, then we return zero. This is used for CG coefficients
  * @retval      n!
  */
-int factorial(int n) {
+int factorial(int n, bool force_zero) {
   int fn = 1;
 
   if (n < 0) {
-    throw "Factorial of a negative number";
+
+    if (force_zero){
+      return 0;
+    }else{
+      throw "Factorial of a negative number";
+    }
   }
 
   for (int i = 1; i <= n; ++i) {
@@ -326,6 +333,195 @@ double cgCoeff(int k, double m, bool s) {
   }
 }
 
+/**
+  * @brief Calculate a general CG coefficient
+  * @brief This is a wrapper around GSL's Wigner3j coefficient routine
+  * @note The arguments are multiplied by 2 as this is specified by GSL's interface
+ */
+double generalCgCoeff(double j1, double j2, double J, double m1, double m2, double M){
+
+  double wigner3j = gsl_sf_coupling_3j(int(2*j1), int(2*j2), int(2*J), int(2*m1), int(2*m2), -int(2*M));
+  // return first_term * second_term * third_term;
+  return std::pow(-1,j1-j2+M) * std::sqrt(2*J + 1.0) * wigner3j;
+
+}
+
+/**
+  * These matrix elements are complex valued
+  * It is < psi1 | Y_1^m \alpha_x | psi2 >
+  * @param k1: Initial state k value
+  * @param k2: Final state k value
+  * @param mu1: Initial state magnetic value
+  * @param mu2: Final state magnetic value
+  * @param m:    Order of the spherical harmonic
+  * @param J12:  Radial integral \int P_b Q_a r
+  * @param J21:  Radial integral \int P_a Q_b r
+ */
+std::complex<double> Y1mAlphaX(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
+
+  int l1, l2;
+  bool s1, s2;
+
+  // We have the selection rules  mu1 + m + 1 = mu2 
+  // and                          mu1 + m - 1 = mu2
+  // Convert k value to l and s
+  qnumDirac2Schro(k1, l1, s1);
+  qnumDirac2Schro(k2, l2, s2);
+
+  // Sign of the k values
+  int sgk1 = (k1 < 0 ? -1 : 1);
+  int sgk2 = (k2 < 0 ? -1 : 1);
+
+  double prefactor1 = std::sqrt(3.0*(2.0*l1 - 2.0*sgk1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 + 1.0)));
+
+  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
+
+  double val1 = l1-sgk1;
+  double val2 = l2;
+  double val3 = l1;
+  double val4 = l2-sgk2;
+
+  // These are the initial prefactors CG coeffs for each of the two terms in our expression
+  double c1 = generalCgCoeff(val1,1.0,val2,0.0,0.0,0.0);
+  double c2 = generalCgCoeff(val3,1.0,val4,0.0,0.0,0.0);
+
+  // There are 8 unique CG coeffs that take the k value as an argument
+  double u1 = cgCoeff(k2,mu2,true);
+  double u2 = cgCoeff(-k2,mu2,false);
+  double u3 = cgCoeff(k2,mu2,false);
+  double u4 = cgCoeff(-k2,mu2,true);
+  double v1 = cgCoeff(k1,mu1,true);
+  double v2 = cgCoeff(-k1,mu1,false);
+  double v3 = cgCoeff(k1,mu1,false);
+  double v4 = cgCoeff(-k1,mu1,true);
+
+  // Now we need the 4 magnetic CG coeffs
+  double c3 = generalCgCoeff(l1-sgk1,1.0,l2,mu1+0.5,m,mu2-0.5);
+  double c4 = generalCgCoeff(l1-sgk1,1.0,l2,mu1-0.5,m,mu2+0.5);
+  double c5 = generalCgCoeff(l1,1.0,l2-sgk2,mu1+0.5,m,mu2-0.5);
+  double c6 = generalCgCoeff(l1,1.0,l2-sgk2,mu1-0.5,m,mu2+0.5);
+
+  // Multiply everything together
+  double term1 = J21 * prefactor1 * c1 * (u1 * v2 * c3 + u3 * v4 * c4);
+
+  double term2 = J12 * prefactor2 * c2 * (u4 * v3 * c5 + u2 * v1 * c6);
+
+  // Final complex result
+  std::complex<double> matel(0.0,term1-term2);
+
+  return matel;
+
+}
+
+std::complex<double> Y1mAlphaY(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
+
+  int l1, l2;
+  bool s1, s2;
+
+  // We have the selection rules  mu1 + m + 1 = mu2 
+  // and                          mu1 + m - 1 = mu2
+  // Convert k value to l and s
+  qnumDirac2Schro(k1, l1, s1);
+  qnumDirac2Schro(k2, l2, s2);
+
+  // Sign of the k values
+  int sgk1 = (k1 < 0 ? -1 : 1);
+  int sgk2 = (k2 < 0 ? -1 : 1);
+
+  double prefactor1 = std::sqrt(3.0*(2.0*l1 - 2.0*sgk1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 + 1.0)));
+
+  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
+
+  double val1 = l1-sgk1;
+  double val2 = l2;
+  double val3 = l1;
+  double val4 = l2-sgk2;
+
+  // These are the initial prefactors CG coeffs for each of the two terms in our expression
+  double c1 = generalCgCoeff(val1,1.0,val2,0.0,0.0,0.0);
+  double c2 = generalCgCoeff(val3,1.0,val4,0.0,0.0,0.0);
+
+  // There are 8 unique CG coeffs that take the k value as an argument
+  double u1 = cgCoeff(k2,mu2,true);
+  double u2 = cgCoeff(-k2,mu2,false);
+  double u3 = cgCoeff(k2,mu2,false);
+  double u4 = cgCoeff(-k2,mu2,true);
+  double v1 = cgCoeff(k1,mu1,true);
+  double v2 = cgCoeff(-k1,mu1,false);
+  double v3 = cgCoeff(k1,mu1,false);
+  double v4 = cgCoeff(-k1,mu1,true);
+
+  // Now we need the 4 magnetic CG coeffs
+  double c3 = generalCgCoeff(l1-sgk1,1.0,l2,mu1+0.5,m,mu2-0.5);
+  double c4 = generalCgCoeff(l1-sgk1,1.0,l2,mu1-0.5,m,mu2+0.5);
+  double c5 = generalCgCoeff(l1,1.0,l2-sgk2,mu1+0.5,m,mu2-0.5);
+  double c6 = generalCgCoeff(l1,1.0,l2-sgk2,mu1-0.5,m,mu2+0.5);
+
+  // Multiply everything together
+  double term1 = J21 * prefactor1 * c1 * (u1 * v2 * c3 - u3 * v4 * c4);
+
+  double term2 = J12 * prefactor2 * c2 * (u2 * v1 * c6 - u4 * v3 * c5);
+
+  // Final complex result
+  std::complex<double> matel(term1+term2, 0.0);
+
+  return matel;
+
+}
+std::complex<double> Y1mAlphaZ(int k1, int k2, double mu1, double mu2, int m, double J12, double J21){
+
+  int l1, l2;
+  bool s1, s2;
+
+  // Convert k value to l and s
+  qnumDirac2Schro(k1, l1, s1);
+  qnumDirac2Schro(k2, l2, s2);
+
+  // Sign of the k values
+  int sgk1 = (k1 < 0 ? -1 : 1);
+  int sgk2 = (k2 < 0 ? -1 : 1);
+
+  double prefactor1 = std::sqrt(3.0*(2.0*l1 - 2.0*sgk1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 + 1.0)));
+
+  double prefactor2 = std::sqrt(3.0*(2.0*l1 + 1.0)/((4.0*Physical::pi)*(2.0*l2 - 2.0*sgk2 + 1.0)));
+
+  double val1 = l1-sgk1;
+  double val2 = l2;
+  double val3 = l1;
+  double val4 = l2-sgk2;
+
+  // These are the initial prefactors CG coeffs for each of the two terms in our expression
+  double c1 = generalCgCoeff(val1,1.0,val2,0.0,0.0,0.0);
+  double c2 = generalCgCoeff(val3,1.0,val4,0.0,0.0,0.0);
+
+  // There are 8 unique CG coeffs that take the k value as an argument
+  double u1 = cgCoeff(k2,mu2,true);
+  double u2 = cgCoeff(-k2,mu2,false);
+  double u3 = cgCoeff(k2,mu2,false);
+  double u4 = cgCoeff(-k2,mu2,true);
+  double v1 = cgCoeff(k1,mu1,true);
+  double v2 = cgCoeff(-k1,mu1,false);
+  double v3 = cgCoeff(k1,mu1,false);
+  double v4 = cgCoeff(-k1,mu1,true);
+
+  // Now we need the 4 magnetic CG coeffs
+  double c3 = generalCgCoeff(l1-sgk1,1.0,l2,mu1-0.5,m,mu2-0.5);
+  double c4 = generalCgCoeff(l1-sgk1,1.0,l2,mu1+0.5,m,mu2+0.5);
+  double c5 = generalCgCoeff(l1,1.0,l2-sgk2,mu1-0.5,m,mu2-0.5);
+  double c6 = generalCgCoeff(l1,1.0,l2-sgk2,mu1+0.5,m,mu2+0.5);
+
+  // Multiply everything together
+  double term1 = J21 * prefactor1 * c1 * (u1 * v4 * c3 - u3 * v2 * c4);
+
+  double term2 = J12 * prefactor2 * c2 * (u4 * v1 * c5 - u2 * v3 * c6);
+
+  // std::cout << "Alpha Z terms " << term1 << " " << term2 << std::endl;
+  // Final complex result
+  std::complex<double> matel(0.0, term1-term2);
+
+  return matel;
+
+}
 /**
   * @brief  Parse an atomic state's quantum numbers from IUPAC notation
   * @note   Parse an atomic state's quantum numbers from IUPAC X-ray notation.

@@ -122,7 +122,8 @@ int main(int argc, char *argv[]) {
         tnums.s2 = s2range[k];
 
         if (tnums.n2 < tnums.n1 || abs(tnums.l2 - tnums.l1) != 1) {
-          continue;
+          // PDJ TEMPORARILY COMMENTED OUT
+          // continue;
         }
 
         transqnums.push_back(tnums);
@@ -188,7 +189,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Compute transition probability
-    tdata.tmat = da.getTransitionProbabilities(n2, l2, s2, n1, l1, s1);
+    da.getTransitionRates(n2, l2, s2, n1, l1, s1, tdata);
 
     LOG(INFO) << "Transition energy = " << (tdata.ds2.E - tdata.ds1.E) / (Physical::eV * 1000) << " kEv\n";
 
@@ -256,7 +257,9 @@ int main(int argc, char *argv[]) {
         saved_states.push_back(sname);
       }
       string fname = seed + "." + transitions[i].name + ".tmat.out";
+      string fname_auger = seed + "." + transitions[i].name + ".auger_tmat.out";
       writeTransitionMatrix(transitions[i].tmat, fname);
+      writeAugerTransitionMatrices(transitions[i].auger_tmat, fname_auger);
     }
   }
 

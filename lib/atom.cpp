@@ -12,6 +12,7 @@
  */
 
 #include "atom.hpp"
+#include "constants.hpp"
 
 /**
  * @brief  Initialise a TransitionMatrix class instance
@@ -931,33 +932,33 @@ DiracState DiracAtom::getState(int n, int l, bool s) {
  * @param  approx_j0: If true, approximate the Bessel function j0(K*r) as 1
  * @retval Transition matrix
  */
-TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
-    int n2, int l2, bool s2, bool approx_j0) {
+void DiracAtom::getTransitionRates(int n1, int l1, bool s1,
+    int n2, int l2, bool s2, TransitionData &tdata, bool approx_j0) {
   int k1, k2;
 
+  // Convert l and s to k
   qnumSchro2Dirac(l1, s1, k1);
   qnumSchro2Dirac(l2, s2, k2);
 
+  // Define our transition matrix
   TransitionMatrix tmat(k1, k2);
 
   // Get the relevant states
   DiracState psi1 = getState(n1, l1, s1);
   DiracState psi2 = getState(n2, l2, s2);
 
+  // Energy difference between the two states
   float DE = psi1.E - psi2.E;
-  float K = DE / Physical::c;
-
-  if (DE < 0 || abs(l2 - l1) != 1) {
-    // Invalid: state 2 has a higher energy, or transition forbidden
-    return tmat;
-  }
+  float K = DE/Physical::c;
 
   // Now the integrals
   int i0 = max(psi1.grid_indices.first, psi2.grid_indices.first);
   int i1 = min(psi1.grid_indices.second, psi2.grid_indices.second);
+
   int delta1 = max(i0 - psi1.grid_indices.first, 0);
   int delta2 = max(i0 - psi2.grid_indices.first, 0);
 
+  // Generate the grid to integrate the states on
   vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
   vector<double> kerP1Q2(intgrid.size()), kerP2Q1(intgrid.size());
 
@@ -965,15 +966,172 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
              << ", " << i1 << "\n";
   LOG(TRACE) << "Grid deltas " << delta1 << ", " << delta2 << "\n";
 
-  for (int i = 0; i < intgrid.size(); ++i) {
-    double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
-    kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i];
-    kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i];
+
+
+  // No transitions as the energy levels are the wrong way round
+  if(DE < 0){
+    tdata.tmat = tmat;
+    return; 
   }
 
-  double J12 = trapzInt(dx, kerP1Q2);
-  double J21 = trapzInt(dx, kerP2Q1);
+  // This is the orbital angular momentum selection rule for an electric dipole
+  // transition
+  if (abs(l2 - l1) == 1) {
 
+    // Evaluate the integrand on the grid
+    for (int i = 0; i < intgrid.size(); ++i) {
+      double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
+      kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i];
+      kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i];
+    }
+
+    // Perform the relevant integrals
+    double J12 = trapzInt(dx, kerP1Q2);
+    double J21 = trapzInt(dx, kerP2Q1);
+
+    // Make a transition matrix that contains only the radiative dipole contributions
+    tdata.tmat = getRadiativeDipoleRates(J12, J21, approx_j0, k1, k2,tmat, K);
+    tdata.auger_tmat = getAugerDipoleRates(n1, l1, s1, n2, l2, s2);
+
+    return;
+  }
+
+  // This is one of the selection rules for an electric quadrupole transition
+  if (abs(l2 - l1) == 2 || abs(l2-l1) == 0) {
+
+    // Evaluate the integrand on the grid
+    for (int i = 0; i < intgrid.size(); ++i) {
+      double j0 = (approx_j0 ? 1.0 : sinc(K * intgrid[i]));
+      kerP1Q2[i] = psi1.P[i + delta1] * psi2.Q[i + delta2] * j0 * intgrid[i]*intgrid[i];
+      kerP2Q1[i] = psi1.Q[i + delta1] * psi2.P[i + delta2] * j0 * intgrid[i]*intgrid[i];
+    }
+
+    // Perform the relevant integrals
+    double J12 = trapzInt(dx, kerP1Q2);
+    double J21 = trapzInt(dx, kerP2Q1);
+
+    // This is where we will compute the E2 + M1 transitions
+    tdata.tmat = getRadiativeQuadrupoleRates(J12, J21, approx_j0, k1, k2, tmat, K);
+    tdata.auger_tmat = getAugerQuadrupoleRates(n1, l1, s1, n2, l2, s2);
+    return;
+
+  }
+  if (abs(l2 - l1) == 3) {
+
+
+    tdata.auger_tmat = getAugerOctupoleRates(n1, l1, s1, n2, l2, s2);
+    return;
+  }
+
+  return;
+}
+
+/** This routine calculates the electric quadrupole + magnetic dipole transition matrix i.e the second
+ * term in the Taylor expansion of the exponential
+ *
+ */
+TransitionMatrix DiracAtom::getRadiativeQuadrupoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float K){
+
+  // We need to compute all of the spherical harmonic matrix elements first
+  //
+  TransitionMatrix quad_tmat(k1, k2);
+
+  std::complex<double> imag_unit(0,1.0);
+  std::vector<std::vector<std::complex<double>>> spherical_matrix = {{0,0,0}, {0,0,0}, {0,0,0}};
+
+  // Loop over all of the possible states, these are magnetic values corresponding to j
+  for (int im1 = 0; im1 < tmat.m1.size(); ++im1) {
+    for (int im2 = 0; im2 < tmat.m2.size(); ++im2) {
+      
+      double m1 = tmat.m1[im1];
+      double m2 = tmat.m2[im2];
+
+      // Magnetic selection rule
+      if (abs(m1 - m2) > 2){
+        continue; 
+      }
+
+      // From Atomic and Laser Spectroscopy by Corney, we have that j = 1/2 to j= 1/2 transitions
+      // are forbidden
+      bool s1, s2;
+      int  l1, l2;
+
+      qnumDirac2Schro(k1, l1, s1);
+      qnumDirac2Schro(k2, l2, s2);
+
+      float spin1 = (s1 == 0  ? -0.5 : 0.5);
+      float spin2 = (s2 == 0  ? -0.5 : 0.5);
+
+      // Return empty tmat if we have the forbidden transition
+      if ((l1 + spin1 == 0.5) && (l2 + spin2 == 0.5)) {
+      
+        return quad_tmat;
+      }
+
+      // First we loop over the three values of m: -1,0 ,1
+      for(int i = -1; i < 2; i++){
+
+        // We compute matrix elements for each spherical harmonic
+        std::complex<double> y1mx = Y1mAlphaX(k1, k2, m1, m2, i, J12, J21);
+        spherical_matrix[0][i+1] = y1mx;
+        std::complex<double> y1my = Y1mAlphaY(k1, k2, m1, m2, i, J12, J21);
+        spherical_matrix[1][i+1] = y1my;
+        std::complex<double> y1mz = Y1mAlphaZ(k1, k2, m1, m2, i, J12, J21);
+        spherical_matrix[2][i+1] = y1mz;
+
+      }
+
+
+      // Now have to combine these to form <a | r \alpha | b> matrix elements
+      std::complex<double> xax = std::sqrt(2.0*Physical::pi/3.0)             * (spherical_matrix[0][0] - spherical_matrix[0][2]);
+      std::complex<double> yax = imag_unit * std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[0][0] + spherical_matrix[0][2]);
+      std::complex<double> zax = std::sqrt(4.0*Physical::pi/3.0)             *  spherical_matrix[0][1];
+
+      std::complex<double> xay = std::sqrt(2.0*Physical::pi/3.0)             * (spherical_matrix[1][0] - spherical_matrix[1][2]);
+      std::complex<double> yay = imag_unit * std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[1][0] + spherical_matrix[1][2]);
+      std::complex<double> zay = std::sqrt(4.0*Physical::pi/3.0)             *  spherical_matrix[1][1];
+
+      std::complex<double> xaz = std::sqrt(2.0*Physical::pi/3.0)             * (spherical_matrix[2][0] - spherical_matrix[2][2]);
+      std::complex<double> yaz = imag_unit * std::sqrt(2.0*Physical::pi/3.0) * (spherical_matrix[2][0] + spherical_matrix[2][2]);
+      std::complex<double> zaz = std::sqrt(4.0*Physical::pi/3.0)             *  spherical_matrix[2][1];
+
+
+      // Total expression from Mathematica
+      // double rate = std::real(8.0*Physical::pi / 15.0 * ((std::conj(xax)*xax) + (2.0*std::conj(xay)*xay) + (2.0*std::conj(xaz)*xaz) - (xay*yax) + (std::conj(yay)*yay) -xaz*zax + 2.0*(std::conj(yax)*yax + std::conj(yaz)*yaz + std::conj(zax)*zax) - yaz*zay + 2.0*std::conj(zay)*zay - yay*zaz + std::conj(zaz)*zaz - xax*(yay + zaz)));
+      double rate = 4.0 * Physical::pi / 15.0 * real((4.0 * xay * conj(xay) + 4.0 * conj(xaz) * xaz - conj(xay) * yax)
+                    - xay * conj(yax) + 4.0 * yax * conj(yax) - conj(xax) * yay + 2.0 * yay * conj(yay)
+                    + 4.0 * yaz * conj(yaz) - conj(xaz) * zax - xaz * conj(zax) + 
+                    4.0 * zax * conj(zax) - conj(yaz) * zay - yaz * conj(zay) +
+                    4.0 * zay * conj(zay) - conj(xax) * zaz - conj(yay) * zaz +
+                    xax * (2.0 * conj(xax) - conj(yay) - conj(zaz)) - yay * conj(zaz) +
+                    2.0 * zaz * conj(zaz));
+      quad_tmat.T[im1][im2] = rate*K/(2.0*Physical::pi);
+
+      LOG(TRACE) << "Quadrupole transition rate, W12 = " << quad_tmat.T[im1][im2] * Physical::s
+                 << " s^-1\n";
+    } 
+  }
+  return quad_tmat;
+
+
+}
+
+/* Separate routine for calculating the dipole transition matrix so it can be separated from the higher order transitions
+ *
+ */
+TransitionMatrix DiracAtom::getRadiativeDipoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float K){
+
+  int l1, l2;
+  bool s1, s2;
+
+  // Convert the Dirac numbers back into Schrodinger
+  qnumDirac2Schro(k1, l1, s1);
+  qnumDirac2Schro(k2, l2, s2);
+
+  // Make an empty transition matrix
+  TransitionMatrix dipole_tmat(k1, k2);
+
+  // Sign of the k value to be used in the CG coefficients
   int sgk1 = (k1 < 0 ? -1 : 1);
   int sgk2 = (k2 < 0 ? -1 : 1);
 
@@ -983,9 +1141,12 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
   // Now on to the full matrix elements
   for (int im1 = 0; im1 < tmat.m1.size(); ++im1) {
     for (int im2 = 0; im2 < tmat.m2.size(); ++im2) {
+      
+      // Grab the actual magnetic numbers
       double m1 = tmat.m1[im1];
       double m2 = tmat.m2[im2];
 
+      // Dipole selection rule
       if (abs(m1 - m2) > 1) {
         // Forbidden
         continue;
@@ -993,6 +1154,7 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
 
       LOG(TRACE) << "Transition m1 = " << m1 << " => m2 = " << m2 << "\n";
 
+      // All of the CG coefficients that we need
       double u1 = cgCoeff(k1, m1, true);
       double u2 = cgCoeff(k1, m1, false);
       double u3 = cgCoeff(-k1, m1, true);
@@ -1008,6 +1170,7 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
                  << v3 << ' ' << v4 << "]\n";
 
       double M2 = 0;
+      // These are the matrix elements according to the different Dirac velocity operators
       if (m1 == m2 + 1) {
         M2 = 2 * pow(u1 * v4 * (l1 == (l2 - sgk2)) * J12 -
                      u3 * v2 * ((l1 - sgk1) == l2) * J21,
@@ -1025,16 +1188,322 @@ TransitionMatrix DiracAtom::getTransitionProbabilities(int n1, int l1, bool s1,
         LOG(TRACE) << "Matrix element = |Az|\n";
       }
 
-      tmat.T[im1][im2] = 4.0 / 3.0 * K * M2;
+      // Calculate Equation 21 from Mudirac paper
+      dipole_tmat.T[im1][im2] = 4.0 / 3.0 * K * M2;
 
-      LOG(TRACE) << "Transition rate, W12 = " << tmat.T[im1][im2] * Physical::s
+      LOG(TRACE) << "Dipole transition rate, W12 = " << dipole_tmat.T[im1][im2] * Physical::s
                  << " s^-1\n";
     }
   }
 
-  return tmat;
+  return dipole_tmat;
+
 }
 
+/**
+ * Auger dipole rates. Each element of the vector corresponds to 
+ * a different unbound electron magnetic number
+ *
+ */
+vector<TransitionMatrix> DiracAtom::getAugerDipoleRates(int ni, int li, bool si, int nf, int lf, bool sf){
+
+
+  // Get the muonic states
+  DiracState dsi = getState(ni, li, si);
+  DiracState dsf = getState(nf, lf, sf);
+
+  // Get the Dirac number for the transition matrix
+  int ki, kf;
+  qnumSchro2Dirac(li, si, ki);
+  qnumSchro2Dirac(lf, sf, kf);
+
+  // Contains the transition matrices for each value of the
+  // unbound electron's magnetic number
+  vector<TransitionMatrix> tmat_vector;
+
+  // Now we build a grid to perform the electron integral on
+  // This is currently a free parameter that needs to be investigated
+  int N = dsi.P.size();
+  int elec_N = 1000;
+
+  // We get ourselves a grid and give it some appropriate limits
+  vector<double> elec_grid = linGrid(1e-8, 10.0, elec_N);
+  
+  // Now build the 1s wavefunction on it
+  vector<double> elec_1s = hydrogenicSchroWavefunction(elec_grid, Z, 1.0, 1, 0);
+
+  // Now calculate the kinetic energy of the unbound electron. This is the muon x-ray energy
+  // minus the electron binding energy
+  double kinetic_E = (dsi.E - dsf.E + hydrogenicSchroEnergy(Z, 1.0, 1)) / Physical::eV;
+
+  // Now get the unbound wavefunctions
+  vector<vector<double>> elec_unbound_all = hydrogenicUnboundWavefunction(elec_grid, Z, kinetic_E);
+  vector<double> elec_unbound(elec_N, 0.0);
+  // CPP has bad array operations so we must manually copy the correct wavefunction element by element
+  for (int i = 0; i< elec_N; i++){
+    elec_unbound[i] = elec_unbound_all[i][1];
+  }
+
+  // Now compute the dipole integral for the electron
+  double dipole_integral = electronAugerDipole(elec_grid, elec_1s, elec_unbound);
+  
+  // Build the muon grid
+  int i0 = max(dsi.grid_indices.first, dsf.grid_indices.first);
+  int i1 = min(dsi.grid_indices.second, dsf.grid_indices.second);
+  int delta1 = max(i0 - dsi.grid_indices.first, 0);
+  int delta2 = max(i0 - dsf.grid_indices.first, 0);
+
+  // Build a log grid and an integrand of the same size
+  vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
+  vector<double> kerP1P2(intgrid.size());
+
+  // Here we're calculating the muon radial integrands i.e P_i P_f on a log grid,
+  // so an extra r appaears
+  for (int i = 0; i < intgrid.size(); ++i) {
+    kerP1P2[i] = dsi.P[i + delta1] * dsf.P[i + delta2] * pow(intgrid[i],2);
+  }
+
+  // Perform the muonic radial integrals
+  double J12 = trapzInt(dx, kerP1P2);
+
+  // We can now compute the total radial contribution to the rate by multiplying and squaring 
+  // the muonic and electronic contributions
+  double radial_integrals = std::pow(J12 * dipole_integral - augerRadialPenetrationCorrection(intgrid,elec_grid,dsi.P,dsf.P,elec_1s, elec_unbound,1), 2);
+  // double radial_integrals = std::pow(J12 * dipole_integral, 2);
+
+  // Now we must do the angular integrals
+  // For now, we are assuming a 1s electron
+  // Since this is the dipole routine, we know that L = 1 for the unbound
+  // electron
+  // We need to loop over the magnetic numbers of every state
+
+  // Loop over the continuum electron
+  for (int me = -1; me <= 1; me++){
+  
+    // Make a transition matrix that will correspond to the current value of me 
+    TransitionMatrix tmat = TransitionMatrix(ki, kf);
+    
+    // Now loop over the muonic magnetic numbers
+    for (int im1 = 0; im1 < tmat.m1.size(); ++im1){
+    
+      for (int im2 = 0; im2 < tmat.m2.size(); ++im2){
+
+        // Get the actual magnetic numbers
+        double mi = tmat.m1[im1];
+        double mf = tmat.m2[im2];
+
+        // Now we can actually compute the angular integrals
+        // and build our transition matrix
+        double angular_ints = pow(augerAngularIntegrals(1, li, lf, 1, 0, me, 0, mi, mf, si, sf), 2);
+        tmat.T[im1][im2] = angular_ints*radial_integrals;
+      }
+    }
+
+    // Put the transition matrix into our vector
+    tmat_vector.push_back(tmat);
+  }
+
+  return tmat_vector;
+}
+
+vector<TransitionMatrix> DiracAtom::getAugerQuadrupoleRates(int ni, int li, bool si, int nf, int lf, bool sf){
+
+
+  // Get the muonic states
+  DiracState dsi = getState(ni, li, si);
+  DiracState dsf = getState(nf, lf, sf);
+
+  // Get the Dirac number for the transition matrix
+  int ki, kf;
+  qnumSchro2Dirac(li, si, ki);
+  qnumSchro2Dirac(lf, sf, kf);
+
+  // Contains the transition matrices for each value of the
+  // unbound electron's magnetic number
+  vector<TransitionMatrix> tmat_vector;
+
+  // Now we build a grid to perform the electron integral on
+  // This is currently a free parameter that needs to be investigated
+  int N = dsi.P.size();
+  int elec_N = 1000;
+
+  // We get ourselves a grid and give it some appropriate limits
+  vector<double> elec_grid = linGrid(1e-8, 10.0, elec_N);
+  
+  // Now build the 1s wavefunction on it
+  vector<double> elec_1s = hydrogenicSchroWavefunction(elec_grid, Z, 1.0, 1, 0);
+
+  // Now calculate the kinetic energy of the unbound electron. This is the muon x-ray energy
+  // minus the electron binding energy
+  double kinetic_E = (dsi.E - dsf.E + hydrogenicSchroEnergy(Z, 1.0, 1)) / Physical::eV;
+
+  // Now get the unbound wavefunctions
+  vector<vector<double>> elec_unbound_all = hydrogenicUnboundWavefunction(elec_grid, Z, kinetic_E);
+  vector<double> elec_unbound(elec_N, 0.0);
+  // CPP has bad array operations so we must manually copy the correct wavefunction element by element
+  for (int i = 0; i< elec_N; i++){
+    elec_unbound[i] = elec_unbound_all[i][2];
+  }
+
+  // Now compute the dipole integral for the electron
+  double dipole_integral = electronAugerQuadrupole(elec_grid, elec_1s, elec_unbound);
+  
+  // Build the muon grid
+  int i0 = max(dsi.grid_indices.first, dsf.grid_indices.first);
+  int i1 = min(dsi.grid_indices.second, dsf.grid_indices.second);
+  int delta1 = max(i0 - dsi.grid_indices.first, 0);
+  int delta2 = max(i0 - dsf.grid_indices.first, 0);
+
+  // Build a log grid and an integrand of the same size
+  vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
+  vector<double> kerP1P2(intgrid.size());
+
+  // Here we're calculating the muon radial integrands i.e P_i P_f on a log grid,
+  // so an extra r appaears
+  for (int i = 0; i < intgrid.size(); ++i) {
+    kerP1P2[i] = dsi.P[i + delta1] * dsf.P[i + delta2] * pow(intgrid[i],3);
+  }
+
+  // Perform the muonic radial integrals
+  double J12 = trapzInt(dx, kerP1P2);
+
+  // We can now compute the total radial contribution to the rate by multiplying and squaring 
+  // the muonic and electronic contributions
+  double radial_integrals = std::pow(J12 * dipole_integral, 2);
+
+  // Now we must do the angular integrals
+  // For now, we are assuming a 1s electron
+  // Since this is the dipole routine, we know that L = 1 for the unbound
+  // electron
+  // We need to loop over the magnetic numbers of every state
+
+  // Loop over the continuum electron
+  for (int me = -2; me <= 2; me++){
+  
+    // Make a transition matrix that will correspond to the current value of me 
+    TransitionMatrix tmat = TransitionMatrix(ki, kf);
+    
+    // Now loop over the muonic magnetic numbers
+    for (int im1 = 0; im1 < tmat.m1.size(); ++im1){
+    
+      for (int im2 = 0; im2 < tmat.m2.size(); ++im2){
+
+        // Get the actual magnetic numbers
+        double mi = tmat.m1[im1];
+        double mf = tmat.m2[im2];
+
+        // Now we can actually compute the angular integrals
+        // and build our transition matrix
+        double angular_ints = pow(augerAngularIntegrals(2, li, lf, 2, 0, me, 0, mi, mf, si, sf), 2);
+        tmat.T[im1][im2] = angular_ints*radial_integrals;
+      }
+    }
+
+    // Put the transition matrix into our vector
+    tmat_vector.push_back(tmat);
+  }
+
+  return tmat_vector;
+}
+vector<TransitionMatrix> DiracAtom::getAugerOctupoleRates(int ni, int li, bool si, int nf, int lf, bool sf){
+
+
+  // Get the muonic states
+  DiracState dsi = getState(ni, li, si);
+  DiracState dsf = getState(nf, lf, sf);
+
+  // Get the Dirac number for the transition matrix
+  int ki, kf;
+  qnumSchro2Dirac(li, si, ki);
+  qnumSchro2Dirac(lf, sf, kf);
+
+  // Contains the transition matrices for each value of the
+  // unbound electron's magnetic number
+  vector<TransitionMatrix> tmat_vector;
+
+  // Now we build a grid to perform the electron integral on
+  // This is currently a free parameter that needs to be investigated
+  int N = dsi.P.size();
+  int elec_N = 1000;
+
+  // We get ourselves a grid and give it some appropriate limits
+  vector<double> elec_grid = linGrid(1e-8, 10.0, elec_N);
+  
+  // Now build the 1s wavefunction on it
+  vector<double> elec_1s = hydrogenicSchroWavefunction(elec_grid, Z, 1.0, 1, 0);
+
+  // Now calculate the kinetic energy of the unbound electron. This is the muon x-ray energy
+  // minus the electron binding energy
+  double kinetic_E = (dsi.E - dsf.E + hydrogenicSchroEnergy(Z, 1.0, 1)) / Physical::eV;
+
+  // Now get the unbound wavefunctions
+  vector<vector<double>> elec_unbound_all = hydrogenicUnboundWavefunction(elec_grid, Z, kinetic_E);
+  vector<double> elec_unbound(elec_N, 0.0);
+  // CPP has bad array operations so we must manually copy the correct wavefunction element by element
+  for (int i = 0; i< elec_N; i++){
+    elec_unbound[i] = elec_unbound_all[i][3];
+  }
+
+  // Now compute the dipole integral for the electron
+  double dipole_integral = electronAugerOctupole(elec_grid, elec_1s, elec_unbound);
+  
+  // Build the muon grid
+  int i0 = max(dsi.grid_indices.first, dsf.grid_indices.first);
+  int i1 = min(dsi.grid_indices.second, dsf.grid_indices.second);
+  int delta1 = max(i0 - dsi.grid_indices.first, 0);
+  int delta2 = max(i0 - dsf.grid_indices.first, 0);
+
+  // Build a log grid and an integrand of the same size
+  vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
+  vector<double> kerP1P2(intgrid.size());
+
+  // Here we're calculating the muon radial integrands i.e P_i P_f on a log grid,
+  // so an extra r appaears
+  for (int i = 0; i < intgrid.size(); ++i) {
+    kerP1P2[i] = dsi.P[i + delta1] * dsf.P[i + delta2] * pow(intgrid[i],4);
+  }
+
+  // Perform the muonic radial integrals
+  double J12 = trapzInt(dx, kerP1P2);
+
+  // We can now compute the total radial contribution to the rate by multiplying and squaring 
+  // the muonic and electronic contributions
+  double radial_integrals = std::pow(J12 * dipole_integral, 2);
+
+  // Now we must do the angular integrals
+  // For now, we are assuming a 1s electron
+  // Since this is the dipole routine, we know that L = 1 for the unbound
+  // electron
+  // We need to loop over the magnetic numbers of every state
+
+  // Loop over the continuum electron
+  for (int me = -3; me <= 3; me++){
+  
+    // Make a transition matrix that will correspond to the current value of me 
+    TransitionMatrix tmat = TransitionMatrix(ki, kf);
+    
+    // Now loop over the muonic magnetic numbers
+    for (int im1 = 0; im1 < tmat.m1.size(); ++im1){
+    
+      for (int im2 = 0; im2 < tmat.m2.size(); ++im2){
+
+        // Get the actual magnetic numbers
+        double mi = tmat.m1[im1];
+        double mf = tmat.m2[im2];
+
+        // Now we can actually compute the angular integrals
+        // and build our transition matrix
+        double angular_ints = pow(augerAngularIntegrals(3, li, lf, 3, 0, me, 0, mi, mf, si, sf), 2);
+        tmat.T[im1][im2] = angular_ints*radial_integrals;
+      }
+    }
+
+    // Put the transition matrix into our vector
+    tmat_vector.push_back(tmat);
+  }
+
+  return tmat_vector;
+}
 DiracIdealAtom::DiracIdealAtom(int Z, double m, int A,
                                NuclearRadiusModel radius_model, double fc,
                                double dx)

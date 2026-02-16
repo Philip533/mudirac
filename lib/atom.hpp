@@ -12,6 +12,7 @@
  */
 
 #include "../vendor/aixlog/aixlog.hpp"
+#include "auger.hpp"
 #include "boundary.hpp"
 #include "constants.hpp"
 #include "econfigs.hpp"
@@ -63,6 +64,7 @@ class TransitionMatrix {
   double totalRate();
 };
 
+TransitionMatrix addTransitionMatrices(TransitionMatrix tmat, TransitionMatrix tmat2);
 struct TransitionData {
   string name;
   string sname1;
@@ -70,6 +72,7 @@ struct TransitionData {
   DiracState ds1;
   DiracState ds2;
   TransitionMatrix tmat;
+  vector<TransitionMatrix> auger_tmat;
 };
 
 class Atom {
@@ -213,8 +216,14 @@ class DiracAtom : public Atom {
                  double &maxE);
   DiracState convergeState(int n = 1, int k = -1);
   DiracState getState(int n, int l, bool s);
-  TransitionMatrix getTransitionProbabilities(int n1, int l1, bool s1, int n2,
-      int l2, bool s2, bool approx_j0 = false);
+  void getTransitionRates(int n1, int l1, bool s1, int n2,
+      int l2, bool s2, TransitionData &tdata, bool approx_j0 = true);
+  TransitionMatrix getRadiativeDipoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
+  TransitionMatrix getRadiativeQuadrupoleRates(double J12, double J21, bool approx_j0, int k1, int k2, TransitionMatrix tmat, float DE);
+  vector<TransitionMatrix> getAugerDipoleRates(int ni, int li, bool si, int nf, int lf, bool sf);
+  vector<TransitionMatrix> getAugerQuadrupoleRates(int ni, int li, bool si, int nf, int lf, bool sf);
+  vector<TransitionMatrix> getAugerOctupoleRates(int ni, int li, bool si, int nf, int lf, bool sf);
+  vector<TransitionMatrix> getAugerRates(int ni, int li, bool si, int nf, int lf, bool sf);
 };
 
 // A class used mainly for debugging purposes, works as DiracAtom but uses only

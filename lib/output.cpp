@@ -81,6 +81,42 @@ void writeTransitionMatrix(TransitionMatrix tmat, string fname) {
 }
 
 /**
+ * @brief Write Auger transition matrices to file
+ */
+void writeAugerTransitionMatrices(vector<TransitionMatrix> tmat, string fname) {
+  ofstream out(fname);
+
+  for (int k = 0; k < tmat.size(); k++){
+
+    // Header
+    out << "#####################################################\n";
+    out << "# TransitionMatrix from state with k = " << tmat[k].k1 << " to state with k = " << tmat[k].k2 << "\n";
+    out << "# for unbound electron magnetic number m_e = " << k-1 << "\n";
+    out << "# Total rate = " << tmat[k].totalRate() * Physical::s << " s^-1\n";
+    out << "#####################################################\n";
+
+    for (int i = -1; i < (int)tmat[k].m1.size(); ++i) {
+      for (int j = -1; j < (int)tmat[k].m2.size(); ++j) {
+        if (j == -1 && i == -1) {
+          out << setw(5) << ' ';
+        } else if (j == -1) {
+          out << setw(5) << tmat[k].m1[i];
+        } else if (i == -1) {
+          out << setw(15) << tmat[k].m2[j];
+        } else {
+          out << setw(15) << tmat[k].T[i][j];
+        }
+      }
+      out << '\n';
+    }
+
+    out << "#####################################################\n";
+    out << "\n";
+  }
+
+  out.close();
+}
+/**
  * @brief  Write an EConfPotential object to a text file
  * @note   Write down a full Electronic Configuration
  * Potential in ASCII format, as grid, charge density,

@@ -61,11 +61,11 @@ bool countTest(int N)
 
 TEST_CASE("Factorials", "[factorial]")
 {
-    REQUIRE(factorial(0) == 1);
-    REQUIRE(factorial(1) == 1);
-    REQUIRE(factorial(4) == 24);
-    REQUIRE(factorial(6) == 720);
-    REQUIRE_THROWS(factorial(-1));
+    REQUIRE(factorial(0,false) == 1);
+    REQUIRE(factorial(1,false) == 1);
+    REQUIRE(factorial(4,false) == 24);
+    REQUIRE(factorial(6,false) == 720);
+    REQUIRE_THROWS(factorial(-1,false));
 }
 
 TEST_CASE("Vector contains", "[vectorContains]")

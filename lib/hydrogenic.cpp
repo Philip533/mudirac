@@ -11,7 +11,54 @@
  */
 
 #include "hydrogenic.hpp"
+/**
+ * @brief  Radial eigenfunction of a given hydrogenic unbound Schroedinger state
+ * @note  Returns the unbound Coulomb wavefunction at a distance r for an electron
+ * with energy E 
+ *
+ * R_l(r) = exp(ikr) * kr * 1_F_1(l + 1-iy;2l+2; -2ikr)
+ *
+ * @param  r:   Distance at which to compute the wavefunction
+ * @param  Z:   Nuclear charge 
+ * @param  E:   Energy of the unbound electron i.e difference of muonic x-ray and binding energy
+ * @param  l:   Orbital quantum number 
+ * @retval      Radial wavefunction value
+ */
+vector<vector<double>> hydrogenicUnboundWavefunction(vector<double> r, double Z, double E) {
 
+
+  // We first need to calculate y, the dimensionless continuum parameter as defined by Akylas in his thesis
+  //
+  // y = Z * alpha /(sqrt(2E + E^2)), where E is the energy of the continuum electron
+  // i.e the closer the electron binding energy is to the muonic x-ray energy, the larger the continuum
+  // parameter, and the larger the rate will be
+  double y = Z*Physical::alpha/(sqrt(2.0 * E + pow(E,2)));
+
+  double *fc_array = (double *)malloc(32);
+  double exponent;
+  double *norm_array = (double *)malloc(32);
+  vector<vector<double>> output(r.size(), vector<double>(4,0.0));
+
+
+  for (int i = 0; i < r.size(); i++){
+
+    *fc_array = 0.0;
+    // Library routine which calculates the Coulomb wavefunction
+    // aka the scattering state wavefunction, for given values of l
+    // where each value for a given l is stored in fc_array
+    gsl_sf_coulomb_wave_F_array(0, 3, y, r[i], fc_array, &exponent);
+    gsl_sf_coulomb_CL_array(0,3, y, norm_array);
+
+    for(int j = 0; j < 4; j++){
+      output[i][j] = fc_array[j];//*norm_array[j];
+    }
+  }
+
+  free(fc_array);
+  free(norm_array);
+
+  return output;
+}
 /**
  * @brief Energy of a given hydrogenic Schroedinger state
  * @note Returns the known eigenenergy for a hydrogenic atom computed with
@@ -54,7 +101,7 @@ double hydrogenicSchroWavefunction(double r, double Z, double mu, int n, int l) 
     throw "Invalid quantum numbers for hydrogenic wavefunction.";
   }
 
-  R = sqrt(pow(2 * arg, 3) * factorial(n - l - 1) / (2.0 * n * factorial(n + l))) * r * exp(-arg * r) * pow(2 * arg * r, l) *
+  R = sqrt(pow(2 * arg, 3) * factorial(n - l - 1, false) / (2.0 * n * factorial(n + l,false))) * r * exp(-arg * r) * pow(2 * arg * r, l) *
       genLaguerrePoly(2 * arg * r, n - l - 1, 2 * l + 1);
 
   return R;
@@ -78,7 +125,7 @@ vector<double> hydrogenicSchroWavefunction(vector<double> r, double Z, double mu
 
   vector<double> R(r.size());
   double arg = Z * mu / n;
-  double prefac = sqrt(pow(2 * arg, 3) * factorial(n - l - 1) / (2.0 * n * factorial(n + l)));
+  double prefac = sqrt(pow(2 * arg, 3) * factorial(n - l - 1,false) / (2.0 * n * factorial(n + l,false)));
 
   if (n < 1 || l < 0 || l >= n) {
     throw "Invalid quantum numbers for hydrogenic wavefunction.";
@@ -86,7 +133,7 @@ vector<double> hydrogenicSchroWavefunction(vector<double> r, double Z, double mu
 
   // We duplicate the code to avoid recalculating the prefactor at every point
   for (int i = 0; i < r.size(); ++i) {
-    R[i] = prefac * r[i] * exp(-arg * r[i]) * pow(2 * arg * r[i], l) *
+    R[i] = prefac * exp(-arg * r[i]) * pow(2 * arg * r[i], l) *
            genLaguerrePoly(2 * arg * r[i], n - l - 1, 2 * l + 1);
   }
 
@@ -175,7 +222,7 @@ vector<double> hydrogenicDiracWavefunction(double r, double Z, double mu, int n,
     pq[1] = -A * Z * Physical::alpha * rhodep;
   } else {
     Ek = E * k / (gamma * mc2);
-    A = sqrt(C * factorial(n - abs(k) - 1) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
+    A = sqrt(C * factorial(n - abs(k) - 1,false) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
              (Ek + pow(Ek, 2)));
     lagP = rho * genLaguerrePoly(rho, n - abs(k) - 1, 2 * gamma + 1);
     lagM = (gamma * mc2 - k * E) / (Physical::c * C) * genLaguerrePoly(rho, n - abs(k), 2 * gamma - 1);
@@ -241,7 +288,7 @@ vector<vector<double>> hydrogenicDiracWavefunction(vector<double> r, double Z, d
     }
   } else {
     Ek = E * k / (gamma * mc2);
-    A = sqrt(C * factorial(n - abs(k) - 1) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
+    A = sqrt(C * factorial(n - abs(k) - 1,false) / (4 * k * (k - gamma) * (n - abs(k) + gamma) * tgamma(n - abs(k) + 2 * gamma + 1)) *
              (Ek + pow(Ek, 2)));
     for (int i = 0; i < r.size(); ++i) {
       rho = 2 * C * r[i];
