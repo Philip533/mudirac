@@ -13,6 +13,7 @@
 
 #include "atom.hpp"
 #include "constants.hpp"
+#include <cmath>
 
 /**
  * @brief  Initialise a TransitionMatrix class instance
@@ -1256,11 +1257,13 @@ vector<TransitionMatrix> DiracAtom::getAugerDipoleRates(int ni, int li, bool si,
   // Build a log grid and an integrand of the same size
   vector<double> intgrid = logGrid(rc, dx, i0, i1)[1];
   vector<double> kerP1P2(intgrid.size());
+  vector<double> kerQ1Q2(intgrid.size());
 
   // Here we're calculating the muon radial integrands i.e P_i P_f on a log grid,
   // so an extra r appaears
   for (int i = 0; i < intgrid.size(); ++i) {
     kerP1P2[i] = dsi.P[i + delta1] * dsf.P[i + delta2] * pow(intgrid[i],2);
+    kerQ1Q2[i] = dsi.Q[i + delta1] * dsf.Q[i + delta2] * pow(intgrid[i],2);
   }
 
   // Perform the muonic radial integrals
